@@ -26,6 +26,7 @@ urlpatterns = [
     path('users/', include('users.urls')),
     path('feedback/', include('feedback.urls')),  # Feedback-related endpoints
     path('reports/', include('reports.urls')),  # Reports-related endpoints
+    path('accounts/', include('allauth.urls')),  # Social authentication endpoints
 ]
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

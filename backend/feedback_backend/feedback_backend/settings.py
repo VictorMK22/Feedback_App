@@ -41,9 +41,15 @@ INSTALLED_APPS = [
     'feedback',
     'reports',
     'rest_framework',
+    'django.contrib.sites',
+    'allauth',
+    'allauth.account',
+    'allauth.socialaccount',
+    'allauth.socialaccount.providers.google',
 ]
 
 AUTH_USER_MODEL = "users.CustomUser"
+SITE_ID = 1
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -156,6 +162,14 @@ VONAGE_API_KEY = config('VONAGE_API_KEY')
 VONAGE_API_SECRET = config('VONAGE_API_SECRET')
 
 AUTHENTICATION_BACKENDS = [
-    'users.auth_backend.UsernameOrEmailAuthBackend',  # Replace 'your_app' with your actual app name
+    'users.auth_backend.UsernameOrEmailAuthBackend',  
     'django.contrib.auth.backends.ModelBackend',  # Default Django backend
 ]
+
+SOCIALACCOUNT_PROVIDERS = {
+    'google': {
+        'SCOPE': ['email', 'profile'],
+        'AUTH_PARAMS': {'access_type': 'offline'},
+    }
+}
+
