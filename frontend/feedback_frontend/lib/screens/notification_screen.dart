@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 
 class NotificationScreen extends StatefulWidget {
+  const NotificationScreen({super.key});
+
   @override
+  // ignore: library_private_types_in_public_api
   _NotificationScreenState createState() => _NotificationScreenState();
 }
 
@@ -32,7 +35,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.blueAccent,
-        title: Text('Notifications'),
+        title: const Text('Notifications'),
         actions: [
           // Filter Dropdown
           DropdownButton<String>(
@@ -49,7 +52,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                 child: Text(value),
               );
             }).toList(),
-            icon: Icon(Icons.filter_list, color: Colors.white),
+            icon: const Icon(Icons.filter_list, color: Colors.white),
           ),
         ],
       ),
@@ -60,7 +63,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
           final notification = notifications[index];
           return Card(
             elevation: 4,
-            margin: EdgeInsets.symmetric(vertical: 8),
+            margin: const EdgeInsets.symmetric(vertical: 8),
             child: ListTile(
               leading: Icon(
                 notification["type"] == "Response Alert"
@@ -72,7 +75,8 @@ class _NotificationScreenState extends State<NotificationScreen> {
               ),
               title: Text(
                 notification["type"]!,
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                style:
+                    const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
               subtitle: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -80,7 +84,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                   Text(notification["message"]!),
                   Text(
                     notification["date"]!,
-                    style: TextStyle(color: Colors.grey),
+                    style: const TextStyle(color: Colors.grey),
                   ),
                 ],
               ),

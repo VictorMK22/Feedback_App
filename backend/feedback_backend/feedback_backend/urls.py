@@ -18,16 +18,25 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
-from feedback.views import home
 
 urlpatterns = [
-    path('', home, name='home'),
+    # Admin Interface
     path('admin/', admin.site.urls),
-    path('users/', include('users.urls')),
-    path('feedback/', include('feedback.urls')),  # Feedback-related endpoints
-    path('reports/', include('reports.urls')),  # Reports-related endpoints
-    path('accounts/', include('allauth.urls')),  # Social authentication endpoints
+
+    # User Management URLs (Namespace: users)
+    path('users/', include('users.urls', namespace='users')),
+
+    # Feedback Management URLs (Namespace: feedback)
+    path('feedback/', include('feedback.urls', namespace='feedback')),
+
+    # Reports Management URLs (Namespace: reports)
+    path('reports/', include('reports.urls', namespace='reports')),
+
+    # Social Authentication URLs (Namespace: accounts)
+    path('accounts/', include('allauth.urls')),
 ]
+
+# Static and Media File Handling (Development Only)
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

@@ -1,11 +1,14 @@
-import 'screens/auth/login_screen.dart';
-import 'screens/auth/registration_screen.dart';
-import 'screens/home_dashboard_screen.dart';
-import 'screens/profile_screen.dart';
-import 'screens/feedback/feedback_submission_screen.dart';
-import 'screens/feedback/feedback_history_screen.dart';
-import 'screens/notifications/notification_screen.dart';
-import 'screens/admin/admin_dashboard_screen.dart';
+import 'package:flutter/material.dart';
+import 'package:feedback_frontend/screens/auth/login_screen.dart';
+import 'package:feedback_frontend/screens/auth/registration_screen.dart';
+import 'package:feedback_frontend/screens/auth/forgot_password_screen.dart';
+import 'package:feedback_frontend/screens/home_screen.dart';
+import 'package:feedback_frontend/screens/profile_screen.dart';
+import 'package:feedback_frontend/screens/feedback_submission_screen.dart';
+import 'package:feedback_frontend/screens/feedback_history_screen.dart';
+import 'package:feedback_frontend/screens/notification_screen.dart';
+import 'package:feedback_frontend/screens/admin_dashboard_screen.dart';
+import 'package:feedback_frontend/screens/settings_screen.dart';
 
 class AppRoutes {
   // Route constants
@@ -17,16 +20,20 @@ class AppRoutes {
   static const feedbackHistory = '/feedbackHistory';
   static const notifications = '/notifications';
   static const adminDashboard = '/adminDashboard';
+  static const forgotPassword = '/forgotPassword';
+  static const String settings = '/settings';
 
   // Routes map
   static Map<String, WidgetBuilder> routes = {
-    login: (context) => LoginScreen(),
-    register: (context) => RegistrationScreen(),
-    home: (context) => HomeDashboardScreen(),
-    profile: (context) => ProfileScreen(),
-    feedbackSubmission: (context) => FeedbackSubmissionScreen(),
-    feedbackHistory: (context) => FeedbackHistoryScreen(),
-    notifications: (context) => NotificationScreen(),
-    adminDashboard: (context) => AdminDashboardScreen(),
+    login: (context) => const LoginScreen(),
+    register: (context) => const RegistrationScreen(),
+    home: (context) => const HomeDashboardScreen(),
+    profile: (context) => const ProfileScreen(),
+    feedbackSubmission: (context) => const FeedbackSubmissionScreen(),
+    feedbackHistory: (context) => const FeedbackHistoryScreen(),
+    notifications: (context) => const NotificationScreen(),
+    adminDashboard: (context) => const AdminDashboardScreen(),
+    forgotPassword: (context) => const ForgotPasswordScreen(),
+    AppRoutes.settings: (context) => const SettingsScreen(),
   };
 }

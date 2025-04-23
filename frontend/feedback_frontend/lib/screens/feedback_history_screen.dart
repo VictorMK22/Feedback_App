@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 
 class FeedbackHistoryScreen extends StatefulWidget {
+  const FeedbackHistoryScreen({super.key});
+
   @override
+  // ignore: library_private_types_in_public_api
   _FeedbackHistoryScreenState createState() => _FeedbackHistoryScreenState();
 }
 
@@ -34,7 +37,7 @@ class _FeedbackHistoryScreenState extends State<FeedbackHistoryScreen> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.blueAccent,
-        title: Text('Feedback History'),
+        title: const Text('Feedback History'),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -44,7 +47,7 @@ class _FeedbackHistoryScreenState extends State<FeedbackHistoryScreen> {
             // Search Bar
             TextField(
               controller: searchController,
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 labelText: 'Search feedback...',
                 border: OutlineInputBorder(),
                 prefixIcon: Icon(Icons.search),
@@ -53,7 +56,7 @@ class _FeedbackHistoryScreenState extends State<FeedbackHistoryScreen> {
                 // Implement search logic here
               },
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
 
             // Filter Options
             Row(
@@ -63,35 +66,35 @@ class _FeedbackHistoryScreenState extends State<FeedbackHistoryScreen> {
                   onPressed: () {
                     // Implement sort by date logic
                   },
-                  icon: Icon(Icons.date_range),
-                  label: Text('Sort by Date'),
+                  icon: const Icon(Icons.date_range),
+                  label: const Text('Sort by Date'),
                   style: ElevatedButton.styleFrom(
-                    primary: Colors.blueAccent,
+                    backgroundColor: Colors.blueAccent,
                   ),
                 ),
                 ElevatedButton.icon(
                   onPressed: () {
                     // Implement filter by status logic
                   },
-                  icon: Icon(Icons.filter_list),
-                  label: Text('Filter by Status'),
+                  icon: const Icon(Icons.filter_list),
+                  label: const Text('Filter by Status'),
                   style: ElevatedButton.styleFrom(
-                    primary: Colors.blueAccent,
+                    backgroundColor: Colors.blueAccent,
                   ),
                 ),
                 ElevatedButton.icon(
                   onPressed: () {
                     // Implement filter by category logic
                   },
-                  icon: Icon(Icons.category),
-                  label: Text('Filter by Category'),
+                  icon: const Icon(Icons.category),
+                  label: const Text('Filter by Category'),
                   style: ElevatedButton.styleFrom(
-                    primary: Colors.blueAccent,
+                    backgroundColor: Colors.blueAccent,
                   ),
                 ),
               ],
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
 
             // Feedback Entries
             Expanded(
@@ -101,7 +104,7 @@ class _FeedbackHistoryScreenState extends State<FeedbackHistoryScreen> {
                   final feedback = feedbacks[index];
                   return Card(
                     elevation: 4,
-                    margin: EdgeInsets.symmetric(vertical: 8),
+                    margin: const EdgeInsets.symmetric(vertical: 8),
                     child: ListTile(
                       title: Text(feedback['title']!),
                       subtitle: Column(
@@ -115,7 +118,7 @@ class _FeedbackHistoryScreenState extends State<FeedbackHistoryScreen> {
                         onPressed: () {
                           // Implement expand functionality here
                         },
-                        child: Text(
+                        child: const Text(
                           'Expand',
                           style: TextStyle(color: Colors.blueAccent),
                         ),

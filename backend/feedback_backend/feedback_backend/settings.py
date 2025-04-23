@@ -12,6 +12,8 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 from pathlib import Path
 
+from datetime import timedelta
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -25,7 +27,12 @@ SECRET_KEY = 'django-insecure-p=#-y_m01*551e5vy8#g*bnol6t!bo-6m9b8@r-th271orkgug
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    'localhost',
+    '127.0.0.1',
+    '10.0.2.2',  # Android emulator's special IP for host loopback
+    '10.0.3.2',  # Genymotion emulator address
+]
 
 
 # Application definition
@@ -41,21 +48,31 @@ INSTALLED_APPS = [
     'feedback',
     'reports',
     'rest_framework',
+    'rest_framework_simplejwt.token_blacklist',
+    'rest_auth',
     'django.contrib.sites',
     'allauth',
     'allauth.account',
     'allauth.socialaccount',
     'allauth.socialaccount.providers.google',
+    'allauth.socialaccount.providers.facebook',
+    'corsheaders',
 ]
 
 AUTH_USER_MODEL = "users.CustomUser"
 SITE_ID = 1
 
+# Redirect URLs after login/logout
+LOGIN_REDIRECT_URL = '/'
+LOGOUT_REDIRECT_URL = '/'
+
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
+    'allauth.account.middleware.AccountMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -149,6 +166,14 @@ REST_FRAMEWORK = {
     )
 }
 
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=30),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True,
+}
+
+
 from decouple import config
 
 EMAIL_BACKEND = config('EMAIL_BACKEND')
@@ -169,7 +194,24 @@ AUTHENTICATION_BACKENDS = [
 SOCIALACCOUNT_PROVIDERS = {
     'google': {
         'SCOPE': ['email', 'profile'],
-        'AUTH_PARAMS': {'access_type': 'offline'},
-    }
+        'AUTH_PARAMS': {'access_type': 'offline'},  # Allows retrieving refresh tokens for long-term access
+        'METHOD': 'oauth2',  # Explicitly specify the OAuth2 method
+        'VERIFIED_EMAIL': True,  # Ensures that only verified emails are accepted
+    },
+    'facebook': {
+        'METHOD': 'oauth2',  # Specify OAuth2 method for Facebook login
+        'SCOPE': ['email', 'public_profile'],  # Access public profile and email
+        'FIELDS': ['email', 'name', 'first_name', 'last_name'],  # Retrieve specific user details
+    },
 }
+
+
+# Allow all origins temporarily for development
+CORS_ALLOW_ALL_ORIGINS = True  # For development only
+
+# For production, specify allowed origins:
+CORS_ALLOWED_ORIGINS = [
+     "http://10.0.2.2:8000",
+     "http://localhost:8000",
+ ]
 

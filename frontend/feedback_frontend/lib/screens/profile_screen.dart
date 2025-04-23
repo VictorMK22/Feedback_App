@@ -1,224 +1,262 @@
+// ignore_for_file: use_build_context_synchronously
+
 import 'package:flutter/material.dart';
-import 'utils/validation.dart'; // Importing centralized validation methods
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:image_picker/image_picker.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ProfileScreen extends StatefulWidget {
+  const ProfileScreen({super.key});
+
   @override
-  _ProfileScreenState createState() => _ProfileScreenState();
+  State<ProfileScreen> createState() => _ProfileScreenState();
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  bool emailNotifications = true; // Controls the email notifications toggle
-  String theme = "Light"; // Default theme
-  String language = "English"; // Default language
+  final _formKey = GlobalKey<FormState>();
+  final nameController = TextEditingController();
+  final emailController = TextEditingController();
+  final currentPasswordController = TextEditingController();
+  final newPasswordController = TextEditingController();
+  String language = 'English';
+  bool isEditingName = false;
+  bool isEditingEmail = false;
 
-  final TextEditingController phoneNumberController = TextEditingController();
-  final TextEditingController bioController = TextEditingController();
+  @override
+  void initState() {
+    super.initState();
+    _fetchProfileData();
+  }
 
-  void _saveProfile() {
-    String phoneNumber = phoneNumberController.text.trim();
-    String bio = bioController.text.trim();
+  @override
+  void dispose() {
+    nameController.dispose();
+    emailController.dispose();
+    currentPasswordController.dispose();
+    newPasswordController.dispose();
+    super.dispose();
+  }
 
-    // Validate inputs using Validator methods
-    String? phoneNumberError = Validator.validatePhoneNumber(phoneNumber);
-    String? bioError = Validator.validateBio(bio);
+  Future<String?> _getAccessToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('access_token');
+  }
 
-    // Check for errors
-    if (phoneNumberError != null || bioError != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(
-          phoneNumberError ?? bioError!,
-        )),
-      );
-      return;
-    }
+  Future<void> _refreshAccessToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    final refreshToken = prefs.getString('refresh_token');
 
-    // Validation passed
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Profile changes saved successfully')),
+    if (refreshToken == null) throw Exception('No refresh token found');
+
+    final response = await http.post(
+      Uri.parse('http://127.0.0.1:8000/token/refresh/'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'refresh': refreshToken}),
     );
 
-    // Call backend API for saving profile changes here
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      await prefs.setString('access_token', data['access']);
+    } else {
+      throw Exception('Failed to refresh token');
+    }
+  }
+
+  Future<Map<String, String>> _getAuthHeaders() async {
+    String? token = await _getAccessToken();
+
+    var response = await http.get(
+      Uri.parse('http://127.0.0.1:8000/users/profile/'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+
+    if (response.statusCode == 401) {
+      await _refreshAccessToken();
+      token = await _getAccessToken(); // get new token
+    }
+
+    return {
+      'Authorization': 'Bearer $token',
+      'Content-Type': 'application/json',
+    };
+  }
+
+  void _fetchProfileData() async {
+    try {
+      final headers = await _getAuthHeaders();
+
+      final response = await http.get(
+        Uri.parse('http://127.0.0.1:8000/users/profile/'),
+        headers: headers,
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        setState(() {
+          nameController.text = data['username'];
+          emailController.text = data['email'];
+          language = _mapCodeToLanguage(data['preferred_language']);
+        });
+      } else {
+        throw Exception('Failed to fetch profile: ${response.body}');
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e')),
+      );
+    }
+  }
+
+  void _saveChanges() async {
+    if (_formKey.currentState!.validate()) {
+      try {
+        final headers = await _getAuthHeaders();
+
+        final response = await http.put(
+          Uri.parse('http://127.0.0.1:8000/users/profile/update/'),
+          headers: headers,
+          body: jsonEncode({
+            "username": nameController.text,
+            "email": emailController.text,
+            "preferred_language": _mapLanguageToCode(language),
+          }),
+        );
+
+        if (response.statusCode == 200) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Profile updated successfully'),
+          ));
+          setState(() {
+            isEditingName = false;
+            isEditingEmail = false;
+          });
+        } else {
+          throw Exception('Failed to update profile: ${response.body}');
+        }
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _uploadProfilePicture() async {
+    final picked = await ImagePicker().pickImage(source: ImageSource.gallery);
+    if (picked != null) {
+      try {
+        final token = await _getAccessToken();
+        final request = http.MultipartRequest(
+          'PUT',
+          Uri.parse('http://127.0.0.1:8000/users/profile/update/'),
+        );
+
+        request.headers['Authorization'] = 'Bearer $token';
+        request.files.add(await http.MultipartFile.fromPath(
+          'profile_picture',
+          picked.path,
+        ));
+
+        final response = await request.send();
+
+        if (response.statusCode == 200) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Profile picture updated')),
+          );
+        } else {
+          throw Exception('Failed to upload picture');
+        }
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
+    }
+  }
+
+  String _mapLanguageToCode(String lang) {
+    switch (lang) {
+      case 'French':
+        return 'fr';
+      case 'Spanish':
+        return 'es';
+      case 'Swahili':
+        return 'sw';
+      default:
+        return 'en';
+    }
+  }
+
+  String _mapCodeToLanguage(String code) {
+    switch (code) {
+      case 'fr':
+        return 'French';
+      case 'es':
+        return 'Spanish';
+      case 'sw':
+        return 'Swahili';
+      default:
+        return 'English';
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.blueAccent,
-        title: Text('Profile'),
-      ),
+      appBar: AppBar(title: const Text('Profile')),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: SingleChildScrollView(
+        child: Form(
+          key: _formKey,
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Profile Picture Section
-              Center(
-                child: Stack(
-                  children: [
-                    CircleAvatar(
-                      radius: 50,
-                      backgroundImage:
-                      AssetImage('assets/images/profile_picture.png'), // Replace with actual image
-                    ),
-                    Positioned(
-                      bottom: 0,
-                      right: 0,
-                      child: GestureDetector(
-                        onTap: () {
-                          // Implement edit profile picture functionality
-                        },
-                        child: CircleAvatar(
-                          radius: 15,
-                          backgroundColor: Colors.blueAccent,
-                          child: Icon(Icons.edit, color: Colors.white, size: 18),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              SizedBox(height: 20),
-
-              // User Details
-              Text(
-                'Sarah Connor', // Replace with dynamic name
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-              ),
-              SizedBox(height: 5),
-              Text(
-                'sarah.connor@example.com', // Replace with dynamic email
-                style: TextStyle(fontSize: 16, color: Colors.grey),
-              ),
-              SizedBox(height: 20),
-
-              // Change Password Button
-              ElevatedButton(
-                onPressed: () {
-                  // Navigate to Change Password screen
-                },
-                style: ElevatedButton.styleFrom(
-                  primary: Colors.blueAccent,
-                  padding: EdgeInsets.symmetric(horizontal: 40, vertical: 15),
-                  textStyle: TextStyle(fontSize: 16),
-                ),
-                child: Text('Change Password'),
-              ),
-              SizedBox(height: 20),
-
-              // Email Notifications Section
-              ListTile(
-                title: Text(
-                  'Email Notifications',
-                  style: TextStyle(fontSize: 16),
-                ),
-                trailing: Switch(
-                  value: emailNotifications,
-                  onChanged: (bool value) {
-                    setState(() {
-                      emailNotifications = value;
-                    });
-                  },
-                ),
-              ),
-              Divider(),
-
-              // Theme Section
-              ListTile(
-                title: Text(
-                  'Theme',
-                  style: TextStyle(fontSize: 16),
-                ),
-                trailing: DropdownButton<String>(
-                  value: theme,
-                  onChanged: (String? newValue) {
-                    setState(() {
-                      theme = newValue!;
-                    });
-                  },
-                  items: <String>['Light', 'Dark']
-                      .map<DropdownMenuItem<String>>((String value) {
-                    return DropdownMenuItem<String>(
-                      value: value,
-                      child: Text(value),
-                    );
-                  }).toList(),
-                ),
-              ),
-              Divider(),
-
-              // Language Section
-              ListTile(
-                title: Text(
-                  'Language',
-                  style: TextStyle(fontSize: 16),
-                ),
-                trailing: DropdownButton<String>(
-                  value: language,
-                  onChanged: (String? newValue) {
-                    setState(() {
-                      language = newValue!;
-                    });
-                  },
-                  items: <String>['English', 'Spanish', 'French']
-                      .map<DropdownMenuItem<String>>((String value) {
-                    return DropdownMenuItem<String>(
-                      value: value,
-                      child: Text(value),
-                    );
-                  }).toList(),
-                ),
-              ),
-              Divider(),
-
-              // Phone Number Field
-              TextField(
-                controller: phoneNumberController,
-                decoration: InputDecoration(
-                  labelText: 'Phone Number (Optional)',
-                  border: OutlineInputBorder(),
-                ),
-                keyboardType: TextInputType.phone,
-              ),
-              SizedBox(height: 10),
-
-              // Bio Field
-              TextField(
-                controller: bioController,
-                maxLines: 4,
-                decoration: InputDecoration(
-                  labelText: 'Bio (Optional)',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              SizedBox(height: 20),
-
-              // Bottom Buttons
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
+              Stack(
+                alignment: Alignment.bottomRight,
                 children: [
-                  ElevatedButton(
-                    onPressed: () {
-                      // Navigate to Edit Profile screen
-                    },
-                    style: ElevatedButton.styleFrom(primary: Colors.blueAccent),
-                    child: Text('Edit Profile'),
+                  const CircleAvatar(
+                    radius: 50,
+                    backgroundImage:
+                        NetworkImage('https://via.placeholder.com/150'),
                   ),
-                  ElevatedButton(
-                    onPressed: _saveProfile,
-                    style: ElevatedButton.styleFrom(primary: Colors.green),
-                    child: Text('Save Changes'),
-                  ),
-                  ElevatedButton(
-                    onPressed: () {
-                      // Log out functionality
-                    },
-                    style: ElevatedButton.styleFrom(primary: Colors.red),
-                    child: Text('Log Out'),
+                  IconButton(
+                    icon: const Icon(Icons.edit),
+                    onPressed: _uploadProfilePicture,
                   ),
                 ],
               ),
+              const SizedBox(height: 20),
+              TextFormField(
+                controller: nameController,
+                decoration: const InputDecoration(labelText: 'Name'),
+              ),
+              TextFormField(
+                controller: emailController,
+                decoration: const InputDecoration(labelText: 'Email'),
+              ),
+              const SizedBox(height: 10),
+              DropdownButtonFormField<String>(
+                value: language,
+                items: ['English', 'French', 'Spanish', 'Swahili']
+                    .map((lang) =>
+                        DropdownMenuItem(value: lang, child: Text(lang)))
+                    .toList(),
+                onChanged: (val) => setState(() => language = val!),
+                decoration:
+                    const InputDecoration(labelText: 'Preferred Language'),
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: _saveChanges,
+                child: const Text('Save Changes'),
+              ),
+              const SizedBox(height: 10),
+              ElevatedButton(
+                // ignore: avoid_print
+                onPressed: () => print('Logging out...'),
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                child: const Text('Logout'),
+              )
             ],
           ),
         ),
