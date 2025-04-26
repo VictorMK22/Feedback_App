@@ -50,9 +50,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Reply to Feedback'),
-        content: TextField(
+        content: const TextField(
           maxLines: 5,
-          decoration: const InputDecoration(
+          decoration: InputDecoration(
             hintText: 'Type your response here...',
             border: OutlineInputBorder(),
           ),

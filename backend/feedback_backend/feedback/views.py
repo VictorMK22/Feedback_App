@@ -5,95 +5,164 @@ from rest_framework import status
 from .models import Feedback, Notification, Response as FeedbackResponse
 from .serializers import FeedbackSerializer, ResponseSerializer, NotificationSerializer
 from rest_framework.pagination import PageNumberPagination
+import os
+from datetime import datetime
+from django.core.files.storage import default_storage
+from django.db.models import Prefetch
+from django.shortcuts import get_object_or_404
 
 # Import LibreTranslate service
 from feedback_backend.services.libre_translator import translate_with_libre
 
 
-# Translate text using LibreTranslate
 class TranslateTextView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
         text = request.GET.get("text", "")
-        target = request.GET.get("lang") or request.user.preferred_language
+        target = request.GET.get("lang") or getattr(request.user, 'preferred_language', 'en')
         source = request.GET.get("source", "en")
 
         if not text:
             return Response({"error": "Missing 'text' parameter"}, status=status.HTTP_400_BAD_REQUEST)
 
-        translated = translate_with_libre(text, target, source)
-        return Response({"translated": translated}, status=status.HTTP_200_OK)
+        try:
+            translated = translate_with_libre(text, target, source)
+            return Response({"translated": translated}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-# Home Dashboard View
 class HomeDashboardView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        username = request.user.username
-        profile_image_url = request.user.profile.profile_picture.url if hasattr(request.user, 'profile') and request.user.profile.profile_picture else None
+        try:
+            username = request.user.username
+            profile_image_url = None
+            if hasattr(request.user, 'profile') and request.user.profile.profile_picture:
+                profile_image_url = request.build_absolute_uri(request.user.profile.profile_picture.url)
 
-        paginator = PageNumberPagination()
-        paginator.page_size = 10
+            paginator = PageNumberPagination()
+            paginator.page_size = 10
 
-        if request.user.role == 'Patient':
-            feedbacks = Feedback.objects.filter(user=request.user).order_by('-created_at')
-        else:
-            feedbacks = Feedback.objects.all().order_by('-created_at')
+            # Prefetch related responses to optimize queries
+            feedbacks = Feedback.objects.filter(
+                user=request.user if request.user.role == 'Patient' else None
+            ).order_by('-created_at').prefetch_related(
+                Prefetch('responses', queryset=FeedbackResponse.objects.order_by('created_at'))
+            )
 
-        paginated_feedbacks = paginator.paginate_queryset(feedbacks, request)
+            paginated_feedbacks = paginator.paginate_queryset(feedbacks, request)
 
-        feedback_data = []
-        for feedback in paginated_feedbacks:
-            responses = FeedbackResponse.objects.filter(feedback=feedback)
-            response_serializer = ResponseSerializer(responses, many=True)
+            feedback_data = []
+            for feedback in paginated_feedbacks:
+                feedback_data.append({
+                    "feedback": FeedbackSerializer(feedback).data,
+                    "responses": ResponseSerializer(feedback.responses.all(), many=True).data,
+                })
 
-            feedback_data.append({
-                "feedback": FeedbackSerializer(feedback).data,
-                "responses": response_serializer.data,
-            })
+            notifications = Notification.objects.filter(user=request.user).order_by('-timestamp')[:10]
+            notification_serializer = NotificationSerializer(notifications, many=True)
 
-        notifications = Notification.objects.filter(user=request.user).order_by('-timestamp')
-        notification_serializer = NotificationSerializer(notifications, many=True)
+            data = {
+                "username": username,
+                "profile_image_url": profile_image_url,
+                "feedback": feedback_data,
+                "notifications": notification_serializer.data,
+            }
 
-        data = {
-            "username": username,
-            "profile_image_url": profile_image_url,
-            "feedback": feedback_data,
-            "notifications": notification_serializer.data,
-        }
-
-        return Response(data, status=status.HTTP_200_OK)
+            return Response(data, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-# Create Feedback (Only Patients)
 class FeedbackCreateView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        if request.user.role != 'Patient':
-            return Response({"error": "Only patients can submit feedback!"}, status=status.HTTP_403_FORBIDDEN)
+        try:
+            if request.user.role != 'Patient':
+                return Response({"error": "Only patients can submit feedback!"}, status=status.HTTP_403_FORBIDDEN)
 
-        serializer = FeedbackSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save(user=request.user)
-            return Response({"message": "Feedback submitted successfully!", "data": serializer.data}, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            # Process the request data to match frontend format
+            data = {
+                'feedback_text': request.data.get('feedback_text'),
+                'rating': float(request.data.get('rating', 0)),
+                'category': request.data.get('category', 'General'),
+                'user': request.user.id
+            }
+
+            serializer = FeedbackSerializer(data=data)
+            
+            if serializer.is_valid():
+                feedback = serializer.save()
+                
+                # Handle file attachments
+                if 'attachments' in request.FILES:
+                    attachments = request.FILES.getlist('attachments')
+                    saved_files = []
+                    
+                    for file in attachments:
+                        # Generate unique filename
+                        file_ext = os.path.splitext(file.name)[1]
+                        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                        filename = f"feedback_{feedback.id}_{timestamp}{file_ext}"
+                        
+                        # Save file to storage
+                        filepath = default_storage.save(f"feedback_attachments/{filename}", file)
+                        saved_files.append(request.build_absolute_uri(filepath))
+                    
+                    # Update feedback with attachments URLs
+                    feedback.attachments = saved_files
+                    feedback.save()
+                
+                # Create notifications for all admins
+                admins = CustomUser.objects.filter(role='Admin')
+                for admin in admins:
+                    Notification.objects.create(
+                        user=admin,
+                        message=f"New feedback submitted by {request.user.username}",
+                        feedback=feedback
+                    )
+                
+                response_data = {
+                    "message": "Feedback submitted successfully!",
+                    "data": FeedbackSerializer(feedback).data
+                }
+                return Response(response_data, status=status.HTTP_201_CREATED)
+            
+            return Response({"error": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-# List Feedback (All Roles)
 class FeedbackListView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        if request.user.role == 'Patient':
-            feedbacks = Feedback.objects.filter(user=request.user)
-        else:
-            feedbacks = Feedback.objects.all()
+        try:
+            if request.user.role == 'Patient':
+                feedbacks = Feedback.objects.filter(user=request.user).order_by('-created_at')
+            else:
+                feedbacks = Feedback.objects.all().order_by('-created_at')
 
-        serializer = FeedbackSerializer(feedbacks, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+            serializer = FeedbackSerializer(feedbacks, many=True)
+            
+            # Format response to include full URLs for attachments
+            data = []
+            for feedback in serializer.data:
+                feedback_data = dict(feedback)
+                if feedback_data['attachments']:
+                    feedback_data['attachments'] = [
+                        request.build_absolute_uri(attachment) 
+                        for attachment in feedback_data['attachments']
+                    ]
+                data.append(feedback_data)
+                
+            return Response(data, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 # Create Response (Only Admins)
@@ -106,7 +175,16 @@ class ResponseCreateView(APIView):
 
         serializer = ResponseSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save(admin=request.user)
+            response = serializer.save(admin=request.user)
+            
+            # Create notification for the patient who submitted the feedback
+            feedback = response.feedback
+            Notification.objects.create(
+                user=feedback.user,
+                message=f"Admin has responded to your feedback",
+                feedback=feedback
+            )
+            
             return Response({"message": "Response created successfully!", "data": serializer.data}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -114,27 +192,26 @@ class ResponseCreateView(APIView):
 # List Notifications
 class NotificationListView(APIView):
     permission_classes = [IsAuthenticated]
-
+    
     def get(self, request):
         notifications = Notification.objects.filter(user=request.user).order_by('-timestamp')
-        serializer = NotificationSerializer(notifications, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        
+        paginator = PageNumberPagination()
+        paginator.page_size = 20  # Number of notifications per page
+        paginated_notifications = paginator.paginate_queryset(notifications, request)
+        
+        serializer = NotificationSerializer(paginated_notifications, many=True)
+        return paginator.get_paginated_response(serializer.data)
 
 
 # Update Notification Status
-class NotificationUpdateView(APIView):
+class MarkNotificationAsReadView(APIView):
     permission_classes = [IsAuthenticated]
 
-    def put(self, request, pk):
-        try:
-            notification = Notification.objects.get(pk=pk, user=request.user)
-        except Notification.DoesNotExist:
-            return Response({"error": "Notification not found!"}, status=status.HTTP_404_NOT_FOUND)
-
-        serializer = NotificationSerializer(notification, data=request.data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return Response({"message": "Notification updated successfully!", "data": serializer.data}, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    def post(self, request, pk):
+        notification = get_object_or_404(Notification, pk=pk, user=request.user)
+        notification.status = 'Read'
+        notification.save()
+        return Response({"message": "Notification marked as read"}, status=status.HTTP_200_OK)
     
 

@@ -37,6 +37,7 @@ class CustomUser(AbstractUser):
         help_text="User's preferred language (ISO 639-1 code, e.g., 'en', 'sw', 'fr')"
     )
     email = models.EmailField(unique=True)
+    is_verified = models.BooleanField(default=False)  # Add this field for verification status
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['username']

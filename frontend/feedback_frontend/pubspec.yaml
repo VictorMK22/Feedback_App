@@ -34,11 +34,19 @@ dependencies:
   flutter_localizations:
     sdk: flutter
   intl: ^0.19.0
-
+  file_picker: ^5.2.5
+  speech_to_text: ^6.1.1
+  device_info_plus: ^9.0.0
+  path: ^1.8.2
+  http_parser: ^4.0.2
+  flutter_svg: ^2.0.0
+  font_awesome_flutter: ^10.8.0
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
+  flutter_secure_storage: ^9.2.2
+  permission_handler: ^10.4.0
   flutter_facebook_auth: ^7.1.1
   google_sign_in: ^6.2.2
   image_picker: ^1.1.2
@@ -47,24 +55,39 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  flutter_launcher_icons: ^0.13.1
+  flutter_lints: ^2.0.0
+  
+flutter_icons:
+  android: true
+  ios: true
+  image_path: "assets/icon/icon.png"
+  image_path_android: "assets/icons/icon.png"
+  image_path_ios: "assets/icons/icon.png"
+  round_icon_path: "assets/icons/icon_round.png"
+  remove_alpha_ios: true
+  adaptive_icon_background: "#FFFFFF"   
+  adaptive_icon_foreground: "assets/icons/icon_foreground.png"
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/google_logo.svg
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
   # activated in the `analysis_options.yaml` file located at the root of your
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
-  flutter_lints: ^5.0.0
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 
 # The following section is specific to Flutter packages.
-flutter:
 
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
   # the material Icons class.
-  uses-material-design: true
 
   # To add assets to your application, add an assets section, like this:
   # assets:

@@ -3,6 +3,10 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
+from django.core.exceptions import ObjectDoesNotExist
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
+from rest_framework.parsers import MultiPartParser, FormParser
 from django.contrib.auth import authenticate
 from django.core.mail import send_mail
 import logging
@@ -100,36 +104,74 @@ class ProfileView(APIView):
 
 
 # User Profile Update
+@method_decorator(csrf_exempt, name='dispatch')
 class ProfileUpdateView(APIView):
     permission_classes = [IsAuthenticated]
 
     def put(self, request):
+        logger.info(f"Authenticated User: {request.user}, Authenticated: {request.user.is_authenticated}")
+
+        # Check if the user is authenticated
+        if not request.user.is_authenticated:
+            return Response(
+                {"error": "Authentication credentials were not provided."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
         user = request.user
-        profile = user.profile
 
-        # Update profile fields (profile_picture, bio)
+        # Check if Profile exists for the user
+        try:
+            profile = user.profile
+        except ObjectDoesNotExist:
+            logger.error(f"Profile not found for user: {user}")
+            return Response(
+                {"error": "Profile does not exist for the user."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        # Handle profile picture upload if it exists in the request
+        if request.FILES and 'profile_picture' in request.FILES:
+            try:
+                profile.profile_picture = request.FILES['profile_picture']
+                profile.save()
+                return Response({
+                    "message": "Profile picture updated successfully!",
+                }, status=status.HTTP_200_OK)
+            except Exception as e:
+                logger.error(f"Error updating profile picture: {e}")
+                return Response({
+                    "error": f"Failed to update profile picture: {str(e)}"
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+        # Handle regular profile data updates
         profile_serializer = ProfileSerializer(profile, data=request.data, partial=True)
-
-        # Update user fields (preferred_language, etc.)
         user_serializer = CustomUserSerializer(user, data=request.data, partial=True)
 
         if profile_serializer.is_valid() and user_serializer.is_valid():
-            if 'email' in user_serializer.validated_data and not user.is_verified:
+            # Optional: Prevent email updates for unverified users
+            if hasattr(user, 'is_verified') and 'email' in user_serializer.validated_data and not user.is_verified:
                 return Response(
                     {"error": "Email change is not allowed for unverified users."},
                     status=status.HTTP_403_FORBIDDEN,
                 )
 
+            # Save valid changes
             profile_serializer.save()
             user_serializer.save()
-
             return Response({
                 "message": "Profile updated successfully!",
                 "user": user_serializer.data,
                 "profile": profile_serializer.data,
             }, status=status.HTTP_200_OK)
 
+        # Log errors
+        logger.error(f"Validation errors - User: {user_serializer.errors}, Profile: {profile_serializer.errors}")
         return Response({
             "user_errors": user_serializer.errors,
-            "profile_errors": profile_serializer.errors
+            "profile_errors": profile_serializer.errors,
         }, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Add support for PATCH requests as well
+    def patch(self, request):
+        return self.put(request)

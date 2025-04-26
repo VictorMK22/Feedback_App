@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import HomeDashboardView, FeedbackCreateView, FeedbackListView, ResponseCreateView, NotificationListView, NotificationUpdateView
+from .views import HomeDashboardView, FeedbackCreateView, FeedbackListView, ResponseCreateView, NotificationListView, MarkNotificationAsReadView
 from .views import TranslateTextView
 
 app_name = "feedback"
@@ -14,6 +14,6 @@ urlpatterns = [
 
     # Notification APIs
     path('notifications/', NotificationListView.as_view(), name='notification_list'),
-    path('notifications/<int:pk>/update/', NotificationUpdateView.as_view(), name='notification_update'),
+    path('notifications/<int:pk>/read/', MarkNotificationAsReadView.as_view(), name='notification_read'),
     path('translate/', TranslateTextView.as_view(), name='translate-text'),
 ]
