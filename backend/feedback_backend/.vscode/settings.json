@@ -5,9 +5,12 @@
         "corsheaders",
         "Genymotion",
         "kipkemei",
+        "levelname",
         "orkgug",
         "simplejwt",
         "socialaccount",
-        "VONAGE"
+        "sociallogin",
+        "VONAGE",
+        "whitenoise"
     ]
 }

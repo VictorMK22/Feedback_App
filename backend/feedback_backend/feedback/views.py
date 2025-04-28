@@ -188,6 +188,22 @@ class ResponseCreateView(APIView):
             return Response({"message": "Response created successfully!", "data": serializer.data}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+class ResponseListView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        # Only admins can view all responses
+        if request.user.role != 'Admin':
+            return Response(
+                {"error": "Only admins can view all responses!"},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        responses = FeedbackResponse.objects.all()  # Replace 'ResponseModel' with your actual model name
+        serializer = ResponseSerializer(responses, many=True)
+
+        return Response({"data": serializer.data}, status=status.HTTP_200_OK)
+
 
 # List Notifications
 class NotificationListView(APIView):

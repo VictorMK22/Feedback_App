@@ -1,6 +1,8 @@
 from django.urls import path
 from .views import (
-    RegisterView, 
+    RegisterView,
+    FacebookLoginView, 
+    GoogleLoginView,
     LoginView, 
     ProfileView, 
     ProfileUpdateView, 
@@ -12,6 +14,8 @@ app_name = "users"
 urlpatterns = [
     # Existing endpoints
     path('register/', RegisterView.as_view(), name='register'),
+    path('auth/facebook/', FacebookLoginView.as_view(), name='facebook_login'),
+    path('auth/google/', GoogleLoginView.as_view(), name='google-auth'),
     path('login/', LoginView.as_view(), name='login'),
     path('reset-password/', ResetPasswordView.as_view(), name='reset_password'),
     path('profile/', ProfileView.as_view(), name='profile'),

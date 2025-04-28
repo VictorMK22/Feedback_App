@@ -1,3 +1,4 @@
+import 'package:feedback_frontend/screens/admin_response_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:feedback_frontend/screens/auth/login_screen.dart';
 import 'package:feedback_frontend/screens/auth/registration_screen.dart';
@@ -21,7 +22,8 @@ class AppRoutes {
   static const notifications = '/notifications';
   static const adminDashboard = '/adminDashboard';
   static const forgotPassword = '/forgotPassword';
-  static const String settings = '/settings';
+  static const adminResponse = '/adminResponse';
+  static const settings = '/settings';
 
   // Routes map
   static Map<String, WidgetBuilder> routes = {
@@ -34,6 +36,7 @@ class AppRoutes {
     notifications: (context) => const NotificationScreen(),
     adminDashboard: (context) => const AdminDashboardScreen(),
     forgotPassword: (context) => const ForgotPasswordScreen(),
+    adminResponse: (context) => const AdminResponseScreen(),
     AppRoutes.settings: (context) => const SettingsScreen(),
   };
 }

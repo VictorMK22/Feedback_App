@@ -10,42 +10,184 @@ from rest_framework.parsers import MultiPartParser, FormParser
 from django.contrib.auth import authenticate
 from django.core.mail import send_mail
 import logging
-from .models import CustomUser
-from .serializers import CustomUserSerializer, ProfileSerializer
+import requests
+from .models import CustomUser, Profile
+from .serializers import (
+    CustomUserSerializer,
+    ProfileSerializer,
+    FacebookAuthSerializer,
+    GoogleAuthSerializer,
+    UserAuthResponseSerializer
+)
+from django.conf import settings
+from rest_framework.exceptions import AuthenticationFailed
 
-# Initialize logger
 logger = logging.getLogger(__name__)
 
-
-# User Registration
 class RegisterView(APIView):
     def post(self, request):
         serializer = CustomUserSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.save()
 
-            # Send welcome email (optional, with error handling)
             try:
                 send_mail(
-                    subject="Welcome to the Feedback App!",
-                    message="Thanks for joining! We're excited to have you onboard.",
-                    from_email="noreply@gmail.com",
+                    subject="Welcome to our App!",
+                    message="Thanks for joining!",
+                    from_email="noreply@example.com",
                     recipient_list=[user.email],
                 )
             except Exception as e:
                 logger.error(f"Failed to send welcome email: {e}")
 
-            return Response({"message": "User registered successfully!"}, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"message": "User registered successfully!"}, 
+                          status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, 
+                      status=status.HTTP_400_BAD_REQUEST)
 
+class FacebookLoginView(APIView):
+    def post(self, request):
+        serializer = FacebookAuthSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-# User Login
+        fb_data = serializer.validated_data
+        email = fb_data.get('email')
+        facebook_id = fb_data.get('id')
+        
+        if not email:
+            return Response(
+                {"error": "Email permission is required"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
+        try:
+            user, created = self._get_or_create_user(
+                email=email,
+                facebook_id=facebook_id,
+                first_name=fb_data.get('first_name', ''),
+                last_name=fb_data.get('last_name', '')
+            )
+
+            refresh = RefreshToken.for_user(user)
+            response_data = self._build_response_data(user, refresh, created)
+            
+            return Response(response_data, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            logger.error(f"Facebook login error: {str(e)}", exc_info=True)
+            return Response(
+                {"error": "Facebook authentication failed"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    def _get_or_create_user(self, email, facebook_id, first_name, last_name):
+        try:
+            user = CustomUser.objects.get(facebook_id=facebook_id)
+            return user, False
+        except CustomUser.DoesNotExist:
+            try:
+                user = CustomUser.objects.get(email=email)
+                user.facebook_id = facebook_id
+                user.auth_provider = 'facebook'
+                user.save()
+                return user, False
+            except CustomUser.DoesNotExist:
+                username = email.split('@')[0]
+                while CustomUser.objects.filter(username=username).exists():
+                    username = f"{username}_{CustomUser.objects.filter(username__startswith=username).count()}"
+                
+                user = CustomUser.objects.create(
+                    email=email,
+                    username=username,
+                    first_name=first_name,
+                    last_name=last_name,
+                    facebook_id=facebook_id,
+                    auth_provider='facebook',
+                    is_verified=True
+                )
+                Profile.objects.create(user=user)
+                return user, True
+
+    def _build_response_data(self, user, refresh, created):
+        return {
+            'user': UserAuthResponseSerializer(user).data,
+            'refresh': str(refresh),
+            'access': str(refresh.access_token),
+            'is_new_user': created
+        }
+
+class GoogleLoginView(APIView):
+    def post(self, request):
+        serializer = GoogleAuthSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        google_data = serializer.validated_data
+        email = google_data['email']
+        google_id = google_data['google_id']
+
+        try:
+            user, created = self._get_or_create_user(
+                email=email,
+                google_id=google_id,
+                first_name=google_data.get('first_name', ''),
+                last_name=google_data.get('last_name', '')
+            )
+
+            refresh = RefreshToken.for_user(user)
+            response_data = self._build_response_data(user, refresh, created)
+            
+            return Response(response_data, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            logger.error(f"Google login error: {str(e)}", exc_info=True)
+            return Response(
+                {"error": "Google authentication failed"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    def _get_or_create_user(self, email, google_id, first_name, last_name):
+        try:
+            user = CustomUser.objects.get(google_id=google_id)
+            return user, False
+        except CustomUser.DoesNotExist:
+            try:
+                user = CustomUser.objects.get(email=email)
+                user.google_id = google_id
+                user.auth_provider = 'google'
+                user.save()
+                return user, False
+            except CustomUser.DoesNotExist:
+                username = email.split('@')[0]
+                while CustomUser.objects.filter(username=username).exists():
+                    username = f"{username}_{CustomUser.objects.filter(username__startswith=username).count()}"
+                
+                user = CustomUser.objects.create(
+                    email=email,
+                    username=username,
+                    first_name=first_name,
+                    last_name=last_name,
+                    google_id=google_id,
+                    auth_provider='google',
+                    is_verified=True
+                )
+                Profile.objects.create(user=user)
+                return user, True
+
+    def _build_response_data(self, user, refresh, created):
+        return {
+            'user': UserAuthResponseSerializer(user).data,
+            'refresh': str(refresh),
+            'access': str(refresh.access_token),
+            'is_new_user': created
+        }
+
+# Username_Email Login View
 class LoginView(APIView):
     def post(self, request):
         login_identifier = request.data.get('username_or_email')
         password = request.data.get('password')
-        print(login_identifier, password)
 
         if not login_identifier or not password:
             return Response(
@@ -53,7 +195,6 @@ class LoginView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # Authenticate user using the custom backend
         user = authenticate(username=login_identifier, password=password)
         if user:
             refresh = RefreshToken.for_user(user)
@@ -70,68 +211,54 @@ class LoginView(APIView):
             status=status.HTTP_401_UNAUTHORIZED,
         )
 
-# Password Reset View
+
 class ResetPasswordView(APIView):
     def post(self, request):
         email = request.data.get('email')
         try:
             user = CustomUser.objects.get(email=email)
-            # Send reset link logic
             send_mail(
                 subject='Password Reset Request',
                 message='Click the link below to reset your password.',
-                from_email='noreply@gmail.com',
+                from_email='meli.victorkip17@gmail.com',
                 recipient_list=[email],
             )
-            return Response({'message': 'Password reset link sent.'}, status=status.HTTP_200_OK)
+            return Response({'message': 'Password reset link sent.'}, 
+                           status=status.HTTP_200_OK)
         except CustomUser.DoesNotExist:
-            return Response({'error': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'error': 'User not found.'}, 
+                           status=status.HTTP_404_NOT_FOUND)
 
 
-# User Profile Retrieval
 class ProfileView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
         user = request.user
         profile = user.profile
-        user_serializer = CustomUserSerializer(user)
-        profile_serializer = ProfileSerializer(profile)
         return Response({
-            "user": user_serializer.data,
-            "profile": profile_serializer.data,
+            "user": CustomUserSerializer(user).data,
+            "profile": ProfileSerializer(profile).data,
         }, status=status.HTTP_200_OK)
 
 
-# User Profile Update
 @method_decorator(csrf_exempt, name='dispatch')
 class ProfileUpdateView(APIView):
     permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
 
     def put(self, request):
-        logger.info(f"Authenticated User: {request.user}, Authenticated: {request.user.is_authenticated}")
-
-        # Check if the user is authenticated
-        if not request.user.is_authenticated:
-            return Response(
-                {"error": "Authentication credentials were not provided."},
-                status=status.HTTP_401_UNAUTHORIZED,
-            )
-
         user = request.user
-
-        # Check if Profile exists for the user
         try:
             profile = user.profile
         except ObjectDoesNotExist:
-            logger.error(f"Profile not found for user: {user}")
             return Response(
                 {"error": "Profile does not exist for the user."},
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        # Handle profile picture upload if it exists in the request
-        if request.FILES and 'profile_picture' in request.FILES:
+        # Handle profile picture upload
+        if 'profile_picture' in request.FILES:
             try:
                 profile.profile_picture = request.FILES['profile_picture']
                 profile.save()
@@ -144,19 +271,11 @@ class ProfileUpdateView(APIView):
                     "error": f"Failed to update profile picture: {str(e)}"
                 }, status=status.HTTP_400_BAD_REQUEST)
 
-        # Handle regular profile data updates
+        # Handle other profile updates
         profile_serializer = ProfileSerializer(profile, data=request.data, partial=True)
         user_serializer = CustomUserSerializer(user, data=request.data, partial=True)
 
         if profile_serializer.is_valid() and user_serializer.is_valid():
-            # Optional: Prevent email updates for unverified users
-            if hasattr(user, 'is_verified') and 'email' in user_serializer.validated_data and not user.is_verified:
-                return Response(
-                    {"error": "Email change is not allowed for unverified users."},
-                    status=status.HTTP_403_FORBIDDEN,
-                )
-
-            # Save valid changes
             profile_serializer.save()
             user_serializer.save()
             return Response({
@@ -165,13 +284,10 @@ class ProfileUpdateView(APIView):
                 "profile": profile_serializer.data,
             }, status=status.HTTP_200_OK)
 
-        # Log errors
-        logger.error(f"Validation errors - User: {user_serializer.errors}, Profile: {profile_serializer.errors}")
         return Response({
             "user_errors": user_serializer.errors,
             "profile_errors": profile_serializer.errors,
         }, status=status.HTTP_400_BAD_REQUEST)
-    
-    # Add support for PATCH requests as well
+
     def patch(self, request):
         return self.put(request)

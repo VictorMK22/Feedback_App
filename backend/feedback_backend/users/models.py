@@ -1,8 +1,7 @@
-from django.contrib.auth.models import AbstractUser
-from django.contrib.auth.models import BaseUserManager
+from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.db import models
+from django.utils.translation import gettext_lazy as _
 
-# Create your models here.
 class CustomUserManager(BaseUserManager):
     def create_user(self, email, username, password=None, **extra_fields):
         if not email:
@@ -13,10 +12,27 @@ class CustomUserManager(BaseUserManager):
         user.save(using=self._db)
         return user
 
+    def create_social_user(self, email, username, auth_provider, **extra_fields):
+        if not email:
+            raise ValueError('Social auth users must have an email address')
+        email = self.normalize_email(email)
+        user = self.model(
+            email=email,
+            username=username,
+            auth_provider=auth_provider,
+            is_verified=True,
+            **extra_fields
+        )
+        user.set_unusable_password()
+        user.save(using=self._db)
+        Profile.objects.get_or_create(user=user)
+        return user
+
     def create_superuser(self, email, username, password=None, **extra_fields):
         extra_fields.setdefault('is_staff', True)
         extra_fields.setdefault('is_superuser', True)
-        extra_fields.setdefault('role', 'Admin')  
+        extra_fields.setdefault('role', 'Admin')
+        extra_fields.setdefault('is_verified', True)
 
         if extra_fields.get('is_staff') is not True:
             raise ValueError('Superuser must have is_staff=True.')
@@ -24,45 +40,61 @@ class CustomUserManager(BaseUserManager):
             raise ValueError('Superuser must have is_superuser=True.')
 
         return self.create_user(email, username, password, **extra_fields)
-    
-class CustomUser(AbstractUser):
-    ROLES = [
-        ('Patient', 'Patient'),
-        ('Admin', 'Admin'),
-    ]
-    role = models.CharField(max_length=10, choices=ROLES, default='Patient')
-    preferred_language = models.CharField(
-        max_length=10,
-        default='en',
-        help_text="User's preferred language (ISO 639-1 code, e.g., 'en', 'sw', 'fr')"
-    )
-    email = models.EmailField(unique=True)
-    is_verified = models.BooleanField(default=False)  # Add this field for verification status
 
+class CustomUser(AbstractUser):
+    class Role(models.TextChoices):
+        PATIENT = 'Patient', _('Patient')
+        ADMIN = 'Admin', _('Admin')
+    
+    class AuthProvider(models.TextChoices):
+        EMAIL = 'email', _('Email')
+        FACEBOOK = 'facebook', _('Facebook')
+        GOOGLE = 'google', _('Google')
+    
+    email = models.EmailField(_('email address'), unique=True)
+    username = models.CharField(_('username'), max_length=150, unique=True)
+    role = models.CharField(_('role'), max_length=10, choices=Role.choices, default=Role.PATIENT)
+    auth_provider = models.CharField(_('auth provider'), max_length=10, choices=AuthProvider.choices, default=AuthProvider.EMAIL)
+    facebook_id = models.CharField(_('facebook ID'), max_length=100, blank=True, null=True, unique=True)
+    google_id = models.CharField(_('google ID'), max_length=100, blank=True, null=True, unique=True)
+    is_verified = models.BooleanField(_('verified'), default=False)
+    preferred_language = models.CharField(_('preferred language'), max_length=10, default='en')
+    
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['username']
+    
+    objects = CustomUserManager()
 
-    objects = CustomUserManager()  # Link your custom manager here
-
-    def __str__(self):
-        return self.username
+    def save(self, *args, **kwargs):
+        if not self.username and self.email:
+            base_username = self.email.split('@')[0]
+            self.username = base_username
+            counter = 1
+            while CustomUser.objects.filter(username=self.username).exists():
+                self.username = f"{base_username}_{counter}"
+                counter += 1
+        super().save(*args, **kwargs)
 
 class Profile(models.Model):
-    NOTIFICATION_PREFERENCES = [
-        ('SMS', 'SMS'),
-        ('Email', 'Email'),
-        ('Both', 'Both'),
-    ]
+    class NotificationPreference(models.TextChoices):
+        SMS = 'SMS', _('SMS')
+        EMAIL = 'Email', _('Email')
+        BOTH = 'Both', _('Both')
+        NONE = 'None', _('None')
 
-    user = models.OneToOneField(CustomUser, on_delete=models.CASCADE)
-    phone_number = models.CharField(max_length=15, blank=True, null=True)
+    user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name='profile')
+    phone_number = models.CharField(_('phone number'), max_length=15, blank=True, null=True)
     notification_preference = models.CharField(
-        max_length=10,        
-        choices=NOTIFICATION_PREFERENCES,
-        default='Both'
+        _('notification preference'), 
+        max_length=10, 
+        choices=NotificationPreference.choices, 
+        default=NotificationPreference.BOTH
     )
-    profile_picture = models.ImageField(upload_to='profile_pictures/', blank=True, null=True)
-    bio = models.TextField(blank=True, null=True)
+    profile_picture = models.ImageField(_('profile picture'), upload_to='profile_pictures/', blank=True, null=True)
+    bio = models.TextField(_('biography'), blank=True, null=True)
+    date_of_birth = models.DateField(_('date of birth'), blank=True, null=True)
+    created_at = models.DateTimeField(_('created at'), auto_now_add=True)
+    updated_at = models.DateTimeField(_('updated at'), auto_now=True)
 
     def __str__(self):
         return f"{self.user.username}'s Profile"
