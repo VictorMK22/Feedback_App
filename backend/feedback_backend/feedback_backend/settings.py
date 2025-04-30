@@ -171,13 +171,11 @@ SIMPLE_JWT = {
     'UPDATE_LAST_LOGIN': True,
     'ALGORITHM': 'HS256',
     'SIGNING_KEY': SECRET_KEY,
-    'VERIFYING_KEY': None,
-    'AUTH_HEADER_TYPES': ('Bearer', 'JWT'),
+    'AUTH_HEADER_TYPES': ('Bearer',),
+    'TOKEN_OBTAIN_SERIALIZER': 'users.serializers.CustomTokenObtainPairSerializer',
     'USER_ID_FIELD': 'id',
     'USER_ID_CLAIM': 'user_id',
-    'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
 }
-
 
 # Email Configuration
 EMAIL_BACKEND = config('EMAIL_BACKEND', default='django.core.mail.backends.smtp.EmailBackend')
@@ -200,17 +198,25 @@ CORS_ALLOWED_ORIGINS = [
 
 CORS_ALLOW_CREDENTIALS = True
 
-# Allauth Configuration
+# Core Authentication Settings
 SITE_ID = 1
-ACCOUNT_SIGNUP_FIELDS = ['email']
-ACCOUNT_USERNAME_REQUIRED = False
-ACCOUNT_LOGIN_METHODS = ['email']
-ACCOUNT_EMAIL_VERIFICATION = 'optional'
-ACCOUNT_UNIQUE_EMAIL = True
-ACCOUNT_LOGOUT_ON_GET = True
-SOCIALACCOUNT_AUTO_SIGNUP = True
-LOGIN_REDIRECT_URL = '/'
-LOGOUT_REDIRECT_URL = '/'
+ACCOUNT_AUTHENTICATION_METHOD = 'email'  # Users log in with email
+ACCOUNT_EMAIL_REQUIRED = True            # Email is required
+ACCOUNT_UNIQUE_EMAIL = True              # Enforce unique emails
+ACCOUNT_USERNAME_REQUIRED = False        # No username needed
+ACCOUNT_EMAIL_VERIFICATION = 'optional'  # Verify emails optionally
+
+# Behavior Settings
+ACCOUNT_LOGOUT_ON_GET = True             # Simpler logout
+LOGIN_REDIRECT_URL = '/'                 # After login redirect
+LOGOUT_REDIRECT_URL = '/'                # After logout redirect
+SOCIALACCOUNT_AUTO_SIGNUP = True         # Smooth social signup
+
+# Signup Configuration (replaces deprecated settings)
+ACCOUNT_SIGNUP_FORM_CLASS = None         # Optional: add custom form
+ACCOUNT_SIGNUP_PASSWORD_ENTER_TWICE = False  # Simpler signup
+
+# Custom Adapters
 ACCOUNT_ADAPTER = 'users.adapters.custom_adapters.CustomAccountAdapter'
 SOCIALACCOUNT_ADAPTER = 'users.adapters.custom_adapters.CustomSocialAccountAdapter'
 

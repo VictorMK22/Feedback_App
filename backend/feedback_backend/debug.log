@@ -23,3 +23,146 @@ INFO 2025-04-28 23:45:18,737 autoreload 15736 8700 D:\VMK\BBC 4th Year\Final Pro
 INFO 2025-04-28 23:45:19,987 autoreload 552 18676 D:\VMK\BBC 4th Year\Final Project\Feedback_App\backend\feedback_backend\feedback_backend\settings.py changed, reloading.
 INFO 2025-04-28 23:45:22,461 autoreload 19604 5412 Watching for file changes with StatReloader
 INFO 2025-04-28 23:45:22,938 autoreload 1432 19508 Watching for file changes with StatReloader
+INFO 2025-04-29 08:50:44,645 autoreload 2568 3780 Watching for file changes with StatReloader
+INFO 2025-04-29 08:51:49,328 autoreload 3364 4112 Watching for file changes with StatReloader
+INFO 2025-04-29 14:54:20,850 autoreload 256 21244 Watching for file changes with StatReloader
+INFO 2025-04-29 14:55:56,500 autoreload 20400 10540 Watching for file changes with StatReloader
+INFO 2025-04-29 14:56:51,817 autoreload 10456 19592 Watching for file changes with StatReloader
+INFO 2025-04-29 15:00:10,214 autoreload 10016 10048 Watching for file changes with StatReloader
+INFO 2025-04-29 15:06:45,978 autoreload 20396 5008 Watching for file changes with StatReloader
+INFO 2025-04-29 15:15:51,410 autoreload 20396 5008 D:\VMK\BBC 4th Year\Final Project\Feedback_App\backend\feedback_backend\feedback_backend\settings.py changed, reloading.
+INFO 2025-04-29 15:15:53,660 autoreload 1064 20240 Watching for file changes with StatReloader
+INFO 2025-04-29 15:27:29,941 autoreload 1064 20240 D:\VMK\BBC 4th Year\Final Project\Feedback_App\backend\feedback_backend\feedback_backend\settings.py changed, reloading.
+INFO 2025-04-29 15:27:32,282 autoreload 15216 19088 Watching for file changes with StatReloader
+INFO 2025-04-29 15:30:54,003 autoreload 8392 12948 Watching for file changes with StatReloader
+WARNING 2025-04-29 15:34:17,656 log 8392 18840 Unauthorized: /users/login/
+WARNING 2025-04-29 15:34:17,657 basehttp 8392 18840 "POST /users/login/ HTTP/1.1" 401 58
+WARNING 2025-04-29 15:34:36,159 log 8392 20420 Unauthorized: /users/login/
+WARNING 2025-04-29 15:34:36,160 basehttp 8392 20420 "POST /users/login/ HTTP/1.1" 401 58
+WARNING 2025-04-29 16:01:00,173 log 8392 16468 Unauthorized: /users/login/
+WARNING 2025-04-29 16:01:00,175 basehttp 8392 16468 "POST /users/login/ HTTP/1.1" 401 58
+WARNING 2025-04-29 16:09:20,268 log 8392 2304 Unauthorized: /users/login/
+WARNING 2025-04-29 16:09:20,270 basehttp 8392 2304 "POST /users/login/ HTTP/1.1" 401 58
+WARNING 2025-04-29 18:59:58,595 log 8392 18704 Unauthorized: /users/login/
+WARNING 2025-04-29 18:59:58,598 basehttp 8392 18704 "POST /users/login/ HTTP/1.1" 401 58
+WARNING 2025-04-29 19:00:02,385 log 8392 21428 Unauthorized: /users/login/
+WARNING 2025-04-29 19:00:02,389 basehttp 8392 21428 "POST /users/login/ HTTP/1.1" 401 58
+WARNING 2025-04-29 19:40:23,209 log 8392 16440 Unauthorized: /users/login/
+WARNING 2025-04-29 19:40:23,219 basehttp 8392 16440 "POST /users/login/ HTTP/1.1" 401 58
+WARNING 2025-04-29 19:40:32,561 log 8392 21312 Unauthorized: /users/login/
+WARNING 2025-04-29 19:40:32,562 basehttp 8392 21312 "POST /users/login/ HTTP/1.1" 401 58
+WARNING 2025-04-29 19:47:56,209 log 8392 16988 Unauthorized: /users/login/
+WARNING 2025-04-29 19:47:56,223 basehttp 8392 16988 "POST /users/login/ HTTP/1.1" 401 58
+WARNING 2025-04-29 20:41:25,265 log 8392 19400 Unauthorized: /users/login/
+WARNING 2025-04-29 20:41:25,268 basehttp 8392 19400 "POST /users/login/ HTTP/1.1" 401 58
+WARNING 2025-04-29 20:41:30,586 log 8392 13672 Unauthorized: /users/login/
+WARNING 2025-04-29 20:41:30,593 basehttp 8392 13672 "POST /users/login/ HTTP/1.1" 401 58
+WARNING 2025-04-29 20:43:29,207 log 8392 7540 Unauthorized: /users/login/
+WARNING 2025-04-29 20:43:29,210 basehttp 8392 7540 "POST /users/login/ HTTP/1.1" 401 58
+WARNING 2025-04-29 21:05:32,296 log 8392 5168 Unauthorized: /users/login/
+WARNING 2025-04-29 21:05:32,298 basehttp 8392 5168 "POST /users/login/ HTTP/1.1" 401 58
+WARNING 2025-04-29 22:38:35,003 log 8392 20060 Unauthorized: /users/register/
+WARNING 2025-04-29 22:38:35,011 basehttp 8392 20060 "POST /users/register/ HTTP/1.1" 401 58
+WARNING 2025-04-29 22:38:40,810 log 8392 19676 Unauthorized: /users/register/
+WARNING 2025-04-29 22:38:40,810 basehttp 8392 19676 "POST /users/register/ HTTP/1.1" 401 58
+WARNING 2025-04-29 22:38:47,023 log 8392 1912 Unauthorized: /users/register/
+WARNING 2025-04-29 22:38:47,024 basehttp 8392 1912 "POST /users/register/ HTTP/1.1" 401 58
+WARNING 2025-04-29 22:38:52,544 log 8392 15816 Unauthorized: /users/register/
+WARNING 2025-04-29 22:38:52,545 basehttp 8392 15816 "POST /users/register/ HTTP/1.1" 401 58
+WARNING 2025-04-29 22:39:06,775 log 8392 14696 Unauthorized: /users/register/
+WARNING 2025-04-29 22:39:06,776 basehttp 8392 14696 "POST /users/register/ HTTP/1.1" 401 58
+WARNING 2025-04-29 22:39:17,340 log 8392 17396 Unauthorized: /users/login/
+WARNING 2025-04-29 22:39:17,341 basehttp 8392 17396 "POST /users/login/ HTTP/1.1" 401 58
+WARNING 2025-04-29 22:39:19,323 log 8392 15068 Unauthorized: /users/login/
+WARNING 2025-04-29 22:39:19,324 basehttp 8392 15068 "POST /users/login/ HTTP/1.1" 401 58
+WARNING 2025-04-29 22:39:20,939 log 8392 11076 Unauthorized: /users/login/
+WARNING 2025-04-29 22:39:20,940 basehttp 8392 11076 "POST /users/login/ HTTP/1.1" 401 58
+WARNING 2025-04-29 22:39:22,223 log 8392 16884 Unauthorized: /users/login/
+WARNING 2025-04-29 22:39:22,224 basehttp 8392 16884 "POST /users/login/ HTTP/1.1" 401 58
+WARNING 2025-04-29 22:39:22,740 log 8392 4820 Unauthorized: /users/login/
+WARNING 2025-04-29 22:39:22,743 basehttp 8392 4820 "POST /users/login/ HTTP/1.1" 401 58
+WARNING 2025-04-29 22:39:22,787 log 8392 14464 Unauthorized: /users/login/
+WARNING 2025-04-29 22:39:22,788 basehttp 8392 14464 "POST /users/login/ HTTP/1.1" 401 58
+WARNING 2025-04-29 22:39:23,577 log 8392 19680 Unauthorized: /users/login/
+WARNING 2025-04-29 22:39:23,578 basehttp 8392 19680 "POST /users/login/ HTTP/1.1" 401 58
+WARNING 2025-04-29 22:39:23,610 log 8392 10220 Unauthorized: /users/login/
+WARNING 2025-04-29 22:39:23,611 basehttp 8392 10220 "POST /users/login/ HTTP/1.1" 401 58
+WARNING 2025-04-30 01:21:29,814 log 8392 3724 Unauthorized: /users/login/
+WARNING 2025-04-30 01:21:29,816 basehttp 8392 3724 "POST /users/login/ HTTP/1.1" 401 58
+INFO 2025-04-30 01:31:56,459 autoreload 8392 12948 D:\VMK\BBC 4th Year\Final Project\Feedback_App\backend\feedback_backend\users\views.py changed, reloading.
+INFO 2025-04-30 01:32:00,168 autoreload 13268 5564 Watching for file changes with StatReloader
+INFO 2025-04-30 01:42:06,601 autoreload 13268 5564 D:\VMK\BBC 4th Year\Final Project\Feedback_App\backend\feedback_backend\users\views.py changed, reloading.
+INFO 2025-04-30 01:42:10,304 autoreload 20412 19616 Watching for file changes with StatReloader
+INFO 2025-04-30 01:45:28,114 autoreload 20412 19616 D:\VMK\BBC 4th Year\Final Project\Feedback_App\backend\feedback_backend\users\views.py changed, reloading.
+INFO 2025-04-30 01:45:31,013 autoreload 20972 1164 Watching for file changes with StatReloader
+INFO 2025-04-30 01:45:36,216 autoreload 20972 1164 D:\VMK\BBC 4th Year\Final Project\Feedback_App\backend\feedback_backend\users\views.py changed, reloading.
+INFO 2025-04-30 01:45:39,282 autoreload 14948 836 Watching for file changes with StatReloader
+INFO 2025-04-30 01:45:42,329 autoreload 14948 836 D:\VMK\BBC 4th Year\Final Project\Feedback_App\backend\feedback_backend\users\views.py changed, reloading.
+INFO 2025-04-30 01:45:46,280 autoreload 11800 15860 Watching for file changes with StatReloader
+ERROR 2025-04-30 01:55:07,437 log 11800 10136 Internal Server Error: /users/login/
+Traceback (most recent call last):
+  File "D:\VMK\BBC 4th Year\Final Project\Feedback_App\backend\feedback\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "D:\VMK\BBC 4th Year\Final Project\Feedback_App\backend\feedback\Lib\site-packages\django\core\handlers\base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\VMK\BBC 4th Year\Final Project\Feedback_App\backend\feedback\Lib\site-packages\django\views\decorators\csrf.py", line 65, in _view_wrapper
+    return view_func(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\VMK\BBC 4th Year\Final Project\Feedback_App\backend\feedback\Lib\site-packages\django\views\generic\base.py", line 104, in view
+    return self.dispatch(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\VMK\BBC 4th Year\Final Project\Feedback_App\backend\feedback\Lib\site-packages\rest_framework\views.py", line 515, in dispatch
+    response = self.handle_exception(exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\VMK\BBC 4th Year\Final Project\Feedback_App\backend\feedback\Lib\site-packages\rest_framework\views.py", line 475, in handle_exception
+    self.raise_uncaught_exception(exc)
+  File "D:\VMK\BBC 4th Year\Final Project\Feedback_App\backend\feedback\Lib\site-packages\rest_framework\views.py", line 486, in raise_uncaught_exception
+    raise exc
+  File "D:\VMK\BBC 4th Year\Final Project\Feedback_App\backend\feedback\Lib\site-packages\rest_framework\views.py", line 512, in dispatch
+    response = handler(request, *args, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\VMK\BBC 4th Year\Final Project\Feedback_App\backend\feedback_backend\users\views.py", line 233, in post
+    'profile_picture': user.profile_picture.url if user.profile_picture else None,
+                                                   ^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'CustomUser' object has no attribute 'profile_picture'
+ERROR 2025-04-30 01:55:07,451 basehttp 11800 10136 "POST /users/login/ HTTP/1.1" 500 108704
+INFO 2025-04-30 02:04:18,797 autoreload 11800 15860 D:\VMK\BBC 4th Year\Final Project\Feedback_App\backend\feedback_backend\users\views.py changed, reloading.
+INFO 2025-04-30 02:04:22,314 autoreload 1336 7448 Watching for file changes with StatReloader
+INFO 2025-04-30 02:04:49,888 basehttp 1336 6004 "POST /users/login/ HTTP/1.1" 200 860
+INFO 2025-04-30 02:05:18,739 basehttp 1336 10028 "POST /users/login/ HTTP/1.1" 200 860
+INFO 2025-04-30 02:09:41,341 autoreload 1336 7448 D:\VMK\BBC 4th Year\Final Project\Feedback_App\backend\feedback_backend\users\views.py changed, reloading.
+INFO 2025-04-30 02:09:44,246 autoreload 5748 16880 Watching for file changes with StatReloader
+INFO 2025-04-30 02:10:20,912 autoreload 5748 16880 D:\VMK\BBC 4th Year\Final Project\Feedback_App\backend\feedback_backend\users\views.py changed, reloading.
+INFO 2025-04-30 02:10:24,319 autoreload 7768 18960 Watching for file changes with StatReloader
+INFO 2025-04-30 02:11:03,524 autoreload 7768 18960 D:\VMK\BBC 4th Year\Final Project\Feedback_App\backend\feedback_backend\users\views.py changed, reloading.
+INFO 2025-04-30 02:11:07,173 autoreload 21496 11224 Watching for file changes with StatReloader
+INFO 2025-04-30 02:11:18,847 basehttp 21496 19484 "POST /users/login/ HTTP/1.1" 200 837
+INFO 2025-04-30 02:11:19,281 basehttp 21496 18792 "GET /feedback/home-dashboard/ HTTP/1.1" 200 143
+INFO 2025-04-30 02:11:19,607 basehttp 21496 18772 "GET /media/profile_pictures/cannondale_GCYFOWz.jpg HTTP/1.1" 200 24740
+WARNING 2025-04-30 02:11:59,660 log 21496 8312 Not Found: /token/refresh/
+WARNING 2025-04-30 02:11:59,661 basehttp 21496 8312 "POST /token/refresh/ HTTP/1.1" 404 3171
+INFO 2025-04-30 02:12:59,500 basehttp 21496 568 "POST /users/login/ HTTP/1.1" 200 837
+INFO 2025-04-30 02:12:59,700 basehttp 21496 16764 "GET /feedback/home-dashboard/ HTTP/1.1" 200 143
+INFO 2025-04-30 02:51:39,382 basehttp 21496 15976 "POST /users/login/ HTTP/1.1" 200 837
+INFO 2025-04-30 02:51:39,574 basehttp 21496 18256 "GET /feedback/home-dashboard/ HTTP/1.1" 200 143
+WARNING 2025-04-30 02:51:58,072 log 21496 18620 Not Found: /token/refresh/
+WARNING 2025-04-30 02:51:58,074 basehttp 21496 18620 "POST /token/refresh/ HTTP/1.1" 404 3171
+INFO 2025-04-30 02:57:19,281 basehttp 21496 8408 "POST /users/login/ HTTP/1.1" 200 837
+INFO 2025-04-30 03:05:09,768 basehttp 21496 5392 "POST /users/login/ HTTP/1.1" 200 837
+INFO 2025-04-30 03:08:44,285 basehttp 21496 1188 "POST /users/login/ HTTP/1.1" 200 837
+INFO 2025-04-30 03:08:44,833 basehttp 21496 11180 "GET /feedback/home-dashboard/ HTTP/1.1" 200 143
+INFO 2025-04-30 03:08:45,094 basehttp 21496 4408 "GET /media/profile_pictures/cannondale_GCYFOWz.jpg HTTP/1.1" 200 24740
+WARNING 2025-04-30 03:09:04,902 log 21496 11296 Not Found: /token/refresh/
+WARNING 2025-04-30 03:09:04,902 basehttp 21496 11296 "POST /token/refresh/ HTTP/1.1" 404 3171
+WARNING 2025-04-30 03:09:38,798 log 21496 7664 Not Found: /token/refresh/
+WARNING 2025-04-30 03:09:38,799 basehttp 21496 7664 "POST /token/refresh/ HTTP/1.1" 404 3171
+WARNING 2025-04-30 03:10:03,339 log 21496 7444 Not Found: /token/refresh/
+WARNING 2025-04-30 03:10:03,340 basehttp 21496 7444 "POST /token/refresh/ HTTP/1.1" 404 3171
+INFO 2025-04-30 03:16:55,194 autoreload 21496 11224 D:\VMK\BBC 4th Year\Final Project\Feedback_App\backend\feedback_backend\feedback_backend\settings.py changed, reloading.
+INFO 2025-04-30 03:17:00,360 autoreload 6764 2316 Watching for file changes with StatReloader
+INFO 2025-04-30 03:18:51,892 autoreload 6764 2316 D:\VMK\BBC 4th Year\Final Project\Feedback_App\backend\feedback_backend\users\serializers.py changed, reloading.
+INFO 2025-04-30 03:18:55,478 autoreload 2424 3836 Watching for file changes with StatReloader
+INFO 2025-04-30 03:20:01,337 autoreload 2424 3836 D:\VMK\BBC 4th Year\Final Project\Feedback_App\backend\feedback_backend\users\urls.py changed, reloading.
+INFO 2025-04-30 03:20:04,716 autoreload 19148 7368 Watching for file changes with StatReloader

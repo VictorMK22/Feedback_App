@@ -10,10 +10,13 @@ class UsernameOrEmailAuthBackend(ModelBackend):
             return None
 
         try:
+            # Single query checks both username and email
             user = UserModel.objects.get(Q(username=username) | Q(email=username))
         except UserModel.DoesNotExist:
+            # Return None if no user found (Django will try other backends)
             return None
 
+        # Verify password and active status
         if user.check_password(password) and self.user_can_authenticate(user):
             return user
 

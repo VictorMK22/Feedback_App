@@ -1,14 +1,18 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'dart:async';
-import 'dart:convert';
 import 'package:file_picker/file_picker.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:path/path.dart' as path;
 import 'package:http_parser/http_parser.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:io' show Platform;
 import 'package:permission_handler/permission_handler.dart';
+import 'dart:io';
+
+// Renamed import to avoid ambiguity
+import 'package:feedback_frontend/screens/auth/login_screen.dart'
+    as auth_screens;
 
 class FeedbackSubmissionScreen extends StatefulWidget {
   const FeedbackSubmissionScreen({super.key});
@@ -20,130 +24,53 @@ class FeedbackSubmissionScreen extends StatefulWidget {
 
 class _FeedbackSubmissionScreenState extends State<FeedbackSubmissionScreen> {
   final TextEditingController feedbackController = TextEditingController();
+  final stt.SpeechToText _speech = stt.SpeechToText();
+
   double starRating = 0;
   String selectedCategory = "Complaint";
   bool isRecording = false;
   bool showNotification = false;
   bool isSubmitting = false;
-  final stt.SpeechToText _speech = stt.SpeechToText();
   bool _speechAvailable = false;
   String _speechError = '';
   List<PlatformFile> attachedFiles = [];
 
-  String getBaseUrl() {
-    if (Platform.isAndroid) {
-      return 'http://10.0.2.2:8000';
-    } else if (Platform.isIOS) {
-      return 'http://localhost:8000';
-    }
+  String get apiUrl => '${_getBaseUrl()}/feedback/create/';
+
+  String _getBaseUrl() {
+    if (Platform.isAndroid) return 'http://10.0.2.2:8000';
+    if (Platform.isIOS) return 'http://localhost:8000';
     return 'http://localhost:8000';
   }
-
-  String get apiUrl => "${getBaseUrl()}/feedback/create/";
 
   @override
   void initState() {
     super.initState();
-    _checkPermissions().then((_) => _initSpeech());
-  }
-
-  Future<void> _checkPermissions() async {
-    try {
-      // Check microphone permission
-      var micStatus = await Permission.microphone.status;
-      if (!micStatus.isGranted) {
-        micStatus = await Permission.microphone.request();
-        if (micStatus != PermissionStatus.granted) {
-          if (mounted) {
-            setState(() {
-              _speechAvailable = false;
-              _speechError = 'Microphone permission denied';
-            });
-          }
-          return;
-        }
-      }
-      // Check storage permissions
-      if (Platform.isAndroid) {
-        // For Android 10+, we need to request storage permission
-        var storageStatus = await Permission.storage.status;
-        if (!storageStatus.isGranted) {
-          storageStatus = await Permission.storage.request();
-        }
-        // For Android 13+, we need to request media permissions
-        if (await _isAndroid13OrHigher()) {
-          var photosStatus = await Permission.photos.status;
-          if (!photosStatus.isGranted) {
-            photosStatus = await Permission.photos.request();
-          }
-        }
-      } else if (Platform.isIOS) {
-        // For iOS, we need photo library permission
-        var photosStatus = await Permission.photos.status;
-        if (!photosStatus.isGranted) {
-          photosStatus = await Permission.photos.request();
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _speechError = 'Permission check failed: ${e.toString()}';
-        });
-      }
-    }
-  }
-
-  Future<bool> _isAndroid13OrHigher() async {
-    if (Platform.isAndroid) {
-      try {
-        final versionString = Platform.operatingSystemVersion;
-        final versionMatch = RegExp(r'\d+').firstMatch(versionString);
-        if (versionMatch != null && versionMatch.group(0) != null) {
-          final version = int.tryParse(versionMatch.group(0)!) ?? 0;
-          return version >= 13;
-        }
-      } catch (e) {
-        debugPrint('Error checking Android version: $e');
-      }
-    }
-    return false;
+    _initSpeech();
   }
 
   Future<void> _initSpeech() async {
     try {
-      bool available = await _speech.initialize(
-        onStatus: (String status) {
-          if (mounted) {
-            setState(() {
-              if (status == 'notListening') {
-                isRecording = false;
-              }
-              _speechError = status == 'done' ? '' : _speechError;
-            });
-          }
-        },
-        onError: (errorNotification) {
-          if (mounted) {
-            setState(() {
-              isRecording = false;
-              _speechError = 'Error: ${errorNotification.errorMsg}';
-            });
-          }
-        },
+      final micStatus = await Permission.microphone.request();
+      if (!micStatus.isGranted) {
+        setState(() => _speechError = 'Microphone permission denied');
+        return;
+      }
+
+      final available = await _speech.initialize(
+        onStatus: (status) => debugPrint('Speech status: $status'),
+        onError: (error) => setState(() => _speechError = error.errorMsg),
       );
-      if (mounted) {
-        setState(() {
-          _speechAvailable = available;
-          _speechError = available ? '' : 'Speech recognition unavailable';
-        });
-      }
+
+      setState(() {
+        _speechAvailable = available;
+        _speechError = available ? '' : 'Speech recognition not available';
+      });
     } catch (e) {
-      if (mounted) {
-        setState(() {
-          _speechAvailable = false;
-          _speechError = 'Failed to initialize speech recognition';
-        });
-      }
+      setState(() {
+        _speechAvailable = false;
+        _speechError = 'Failed to initialize speech: ${e.toString()}';
+      });
     }
   }
 
@@ -161,10 +88,8 @@ class _FeedbackSubmissionScreenState extends State<FeedbackSubmissionScreen> {
     try {
       await _speech.listen(
         onResult: (result) {
-          if (mounted && result.finalResult) {
-            setState(() {
-              feedbackController.text = result.recognizedWords;
-            });
+          if (result.finalResult && mounted) {
+            setState(() => feedbackController.text = result.recognizedWords);
           }
         },
       );
@@ -172,53 +97,41 @@ class _FeedbackSubmissionScreenState extends State<FeedbackSubmissionScreen> {
       if (mounted) {
         setState(() {
           isRecording = false;
-          _speechError = 'Failed to start listening';
+          _speechError = 'Error: ${e.toString()}';
         });
-        _showSnackBar(_speechError);
       }
     }
   }
 
-  void _stopListening() {
+  Future<void> _stopListening() async {
     try {
-      if (_speech.isListening) {
-        _speech.stop();
-      }
-      if (mounted) {
-        setState(() => isRecording = false);
-      }
+      await _speech.stop();
+      setState(() => isRecording = false);
     } catch (e) {
-      if (mounted) {
-        setState(() {
-          isRecording = false;
-          _speechError = 'Error stopping speech recognition';
-        });
-      }
+      setState(() {
+        isRecording = false;
+        _speechError = 'Error stopping: ${e.toString()}';
+      });
     }
   }
 
   Future<void> _pickFiles() async {
     try {
-      // Check storage permission again before picking files
       if (Platform.isAndroid) {
-        if (await Permission.storage.isDenied) {
-          await Permission.storage.request();
-          if (await Permission.storage.isDenied) {
-            _showSnackBar('Storage permission required to attach files');
-            return;
-          }
+        final status = await Permission.storage.request();
+        if (!status.isGranted) {
+          _showSnackBar('Storage permission required');
+          return;
         }
       } else if (Platform.isIOS) {
-        if (await Permission.photos.isDenied) {
-          await Permission.photos.request();
-          if (await Permission.photos.isDenied) {
-            _showSnackBar('Photo library access required to attach files');
-            return;
-          }
+        final status = await Permission.photos.request();
+        if (!status.isGranted) {
+          _showSnackBar('Photo library access required');
+          return;
         }
       }
 
-      FilePickerResult? result = await FilePicker.platform.pickFiles(
+      final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
         allowedExtensions: [
           'jpg',
@@ -243,43 +156,20 @@ class _FeedbackSubmissionScreenState extends State<FeedbackSubmissionScreen> {
     }
   }
 
-  void _removeFile(int index) {
-    if (mounted) {
-      setState(() => attachedFiles.removeAt(index));
-    }
-  }
-
-  void _showSnackBar(String message) {
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(message),
-          duration: const Duration(seconds: 3),
-        ),
-      );
-    }
-  }
-
-  Future<String?> _getToken() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      return prefs.getString('auth_token');
-    } catch (e) {
-      _showSnackBar('Error accessing authentication token');
-      return null;
-    }
-  }
-
   Future<void> _submitFeedback() async {
     if (isSubmitting) return;
 
     final token = await _getToken();
     if (token == null) {
-      _showSnackBar('You need to login first');
+      Navigator.pushReplacement(
+        // ignore: use_build_context_synchronously
+        context,
+        MaterialPageRoute(builder: (context) => auth_screens.LoginScreen()),
+      );
       return;
     }
 
-    String feedback = feedbackController.text.trim();
+    final feedback = feedbackController.text.trim();
     if (feedback.isEmpty) {
       _showSnackBar('Please provide feedback text');
       return;
@@ -293,68 +183,66 @@ class _FeedbackSubmissionScreenState extends State<FeedbackSubmissionScreen> {
     setState(() => isSubmitting = true);
 
     try {
-      var request = http.MultipartRequest('POST', Uri.parse(apiUrl));
-      request.headers['Authorization'] = 'Bearer $token';
-      request.fields['feedback_text'] = feedback;
-      request.fields['rating'] = starRating.toString();
-      request.fields['category'] = selectedCategory;
+      final request = http.MultipartRequest('POST', Uri.parse(apiUrl))
+        ..headers['Authorization'] = 'Bearer $token'
+        ..fields['feedback_text'] = feedback
+        ..fields['rating'] = starRating.toString()
+        ..fields['category'] = selectedCategory;
 
-      for (var file in attachedFiles) {
-        String fileName = file.name;
-        String extension = path.extension(fileName).toLowerCase();
-        String contentType = _getContentType(extension);
+      for (final file in attachedFiles) {
         if (file.bytes != null) {
-          request.files.add(
-            http.MultipartFile.fromBytes(
-              'attachments',
-              file.bytes!,
-              filename: fileName,
-              contentType: MediaType.parse(contentType),
-            ),
-          );
+          request.files.add(http.MultipartFile.fromBytes(
+            'attachments',
+            file.bytes!,
+            filename: file.name,
+            contentType:
+                MediaType.parse(_getContentType(path.extension(file.name))),
+          ));
         } else if (file.path != null) {
-          request.files.add(
-            await http.MultipartFile.fromPath(
-              'attachments',
-              file.path!,
-              filename: fileName,
-              contentType: MediaType.parse(contentType),
-            ),
-          );
+          request.files.add(await http.MultipartFile.fromPath(
+            'attachments',
+            file.path!,
+            filename: file.name,
+            contentType:
+                MediaType.parse(_getContentType(path.extension(file.name))),
+          ));
         }
       }
 
-      var response = await http.Response.fromStream(await request.send());
+      final response = await http.Response.fromStream(await request.send());
       final responseData = json.decode(response.body) as Map<String, dynamic>;
 
       if (response.statusCode == 201) {
-        _showSnackBar(responseData['message']?.toString() ??
-            'Feedback submitted successfully');
-        if (mounted) {
-          setState(() {
-            feedbackController.clear();
-            starRating = 0;
-            selectedCategory = "Complaint";
-            attachedFiles.clear();
-            showNotification = true;
-          });
-          Future.delayed(const Duration(seconds: 3), () {
-            if (mounted) setState(() => showNotification = false);
-          });
-        }
+        _showSuccessNotification();
+        _resetForm();
       } else {
-        _showSnackBar(
-            responseData['error']?.toString() ?? 'Failed to submit feedback');
+        _showSnackBar(responseData['error']?.toString() ?? 'Submission failed');
       }
     } catch (error) {
-      _showSnackBar('Error: Could not submit feedback - ${error.toString()}');
+      _showSnackBar('Error: ${error.toString()}');
     } finally {
       if (mounted) setState(() => isSubmitting = false);
     }
   }
 
+  void _showSuccessNotification() {
+    setState(() => showNotification = true);
+    Future.delayed(const Duration(seconds: 3), () {
+      if (mounted) setState(() => showNotification = false);
+    });
+  }
+
+  void _resetForm() {
+    feedbackController.clear();
+    setState(() {
+      starRating = 0;
+      selectedCategory = "Complaint";
+      attachedFiles.clear();
+    });
+  }
+
   String _getContentType(String extension) {
-    switch (extension) {
+    switch (extension.toLowerCase()) {
       case '.jpg':
       case '.jpeg':
         return 'image/jpeg';
@@ -375,6 +263,41 @@ class _FeedbackSubmissionScreenState extends State<FeedbackSubmissionScreen> {
       default:
         return 'application/octet-stream';
     }
+  }
+
+  IconData _getFileIcon(PlatformFile file) {
+    final ext = file.extension?.toLowerCase() ?? '';
+    if (['jpg', 'jpeg', 'png'].contains(ext)) return Icons.image;
+    if (ext == 'mp4') return Icons.videocam;
+    if (['mp3', 'wav'].contains(ext)) return Icons.audiotrack;
+    if (ext == 'pdf') return Icons.picture_as_pdf;
+    return Icons.insert_drive_file;
+  }
+
+  Future<String?> _getToken() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getString('auth_token');
+    } catch (e) {
+      _showSnackBar('Error accessing token');
+      return null;
+    }
+  }
+
+  void _showSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    feedbackController.dispose();
+    _speech.cancel();
+    super.dispose();
   }
 
   @override
@@ -420,22 +343,20 @@ class _FeedbackSubmissionScreenState extends State<FeedbackSubmissionScreen> {
             const SizedBox(height: 20),
             Row(
               children: [
-                Tooltip(
-                  message:
-                      _speechError.isNotEmpty ? _speechError : 'Voice input',
-                  child: IconButton(
-                    icon: Icon(isRecording ? Icons.stop : Icons.mic),
-                    color: isRecording
-                        ? Colors.red
-                        : _speechAvailable
-                            ? Colors.blue
-                            : Colors.grey,
-                    iconSize: 40,
-                    onPressed: _speechAvailable
-                        ? () =>
-                            isRecording ? _stopListening() : _startListening()
-                        : null,
-                  ),
+                IconButton(
+                  icon: Icon(isRecording ? Icons.stop : Icons.mic),
+                  color: isRecording
+                      ? Colors.red
+                      : _speechAvailable
+                          ? Colors.blue
+                          : Colors.grey,
+                  iconSize: 40,
+                  onPressed: _speechAvailable
+                      ? () => isRecording ? _stopListening() : _startListening()
+                      : () {
+                          _initSpeech();
+                          _showSnackBar('Initializing speech...');
+                        },
                 ),
                 const Spacer(),
                 IconButton(
@@ -445,6 +366,13 @@ class _FeedbackSubmissionScreenState extends State<FeedbackSubmissionScreen> {
                 ),
               ],
             ),
+            if (_speechError.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(
+                _speechError,
+                style: const TextStyle(color: Colors.red, fontSize: 12),
+              ),
+            ],
             if (attachedFiles.isNotEmpty) ...[
               const SizedBox(height: 20),
               const Text('Attached Files:',
@@ -454,20 +382,18 @@ class _FeedbackSubmissionScreenState extends State<FeedbackSubmissionScreen> {
                 height: attachedFiles.length > 2 ? 120 : 60,
                 child: ListView.builder(
                   itemCount: attachedFiles.length,
-                  itemBuilder: (context, index) {
-                    final file = attachedFiles[index];
-                    return ListTile(
-                      leading: Icon(_getFileIcon(file)),
-                      title: Text(
-                        file.name,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      trailing: IconButton(
-                        icon: const Icon(Icons.close),
-                        onPressed: () => _removeFile(index),
-                      ),
-                    );
-                  },
+                  itemBuilder: (context, index) => ListTile(
+                    leading: Icon(_getFileIcon(attachedFiles[index])),
+                    title: Text(
+                      attachedFiles[index].name,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    trailing: IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () =>
+                          setState(() => attachedFiles.removeAt(index)),
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -521,50 +447,33 @@ class _FeedbackSubmissionScreenState extends State<FeedbackSubmissionScreen> {
                       ),
               ),
             ),
-            if (showNotification)
-              Padding(
-                padding: const EdgeInsets.only(top: 20),
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.green,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.check_circle, color: Colors.white),
-                      SizedBox(width: 8),
-                      Text(
-                        'Thank you! Your feedback has been submitted.',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
+            if (showNotification) ...[
+              const SizedBox(height: 20),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.green,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.check_circle, color: Colors.white),
+                    SizedBox(width: 8),
+                    Text(
+                      'Thank you! Your feedback has been submitted.',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
+            ],
           ],
         ),
       ),
     );
-  }
-
-  IconData _getFileIcon(PlatformFile file) {
-    final ext = file.extension?.toLowerCase() ?? '';
-    if (['jpg', 'jpeg', 'png'].contains(ext)) return Icons.image;
-    if (ext == 'mp4') return Icons.videocam;
-    if (['mp3', 'wav'].contains(ext)) return Icons.audiotrack;
-    if (ext == 'pdf') return Icons.picture_as_pdf;
-    return Icons.insert_drive_file;
-  }
-
-  @override
-  void dispose() {
-    feedbackController.dispose();
-    _speech.cancel();
-    super.dispose();
   }
 }

@@ -185,31 +185,59 @@ class GoogleLoginView(APIView):
 
 # Username_Email Login View
 class LoginView(APIView):
-    def post(self, request):
-        login_identifier = request.data.get('username_or_email')
-        password = request.data.get('password')
+    """
+    Authenticate via either username or email.
+    Returns JWT tokens and extended user data.
+    """
+    authentication_classes = []  # Disables default authentication
+    permission_classes = []     # Allows unauthenticated access
 
-        if not login_identifier or not password:
+    def post(self, request):
+        # Input validation and sanitization
+        identifier = str(request.data.get('username_or_email', '')).strip()
+        password = str(request.data.get('password', '')).strip()
+
+        if not identifier or not password:
             return Response(
-                {"error": "Both username/email and password are required."},
-                status=status.HTTP_400_BAD_REQUEST,
+                {"detail": "Both identifier and password are required"},
+                status=status.HTTP_400_BAD_REQUEST
             )
 
-        user = authenticate(username=login_identifier, password=password)
-        if user:
-            refresh = RefreshToken.for_user(user)
-            return Response({
-                'refresh': str(refresh),
-                'access': str(refresh.access_token),
-                'email': user.email,
-                'role': user.role,
-                'username': user.username,
-            }, status=status.HTTP_200_OK)
+        # Authentication
+        user = authenticate(request, username=identifier, password=password)
+        
+        if not user:
+            return Response(
+                {"detail": "Invalid credentials"},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
 
-        return Response(
-            {"error": "Invalid email/username or password."},
-            status=status.HTTP_401_UNAUTHORIZED,
-        )
+        if not user.is_active:
+            return Response(
+                {"detail": "Account is inactive"},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        # Ensure profile exists
+        try:
+            profile = user.profile
+        except ObjectDoesNotExist:
+            profile = Profile.objects.create(user=user)
+
+        # Token generation
+        refresh = RefreshToken.for_user(user)
+        
+        # Prepare response data
+        response_data = {
+            "access": str(refresh.access_token),
+            "refresh": str(refresh),
+            "user": UserAuthResponseSerializer(
+                user,
+                context={'request': request}
+            ).data
+        }
+
+        return Response(response_data, status=status.HTTP_200_OK)
 
 
 class ResetPasswordView(APIView):

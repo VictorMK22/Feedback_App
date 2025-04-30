@@ -1,17 +1,24 @@
+// ignore_for_file: use_build_context_synchronously
+
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io'; // For SocketException
+import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:flutter/services.dart'; // For PlatformException
-import 'package:feedback_frontend/utils/validation.dart';
-import 'package:feedback_frontend/utils/app_routes.dart';
+import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:provider/provider.dart';
+
+// Import your project files
+import 'package:feedback_frontend/utils/validation.dart';
+import 'package:feedback_frontend/utils/app_routes.dart';
 import 'package:feedback_frontend/utils/token_service.dart';
-import '../config/app_config.dart';
+import 'package:feedback_frontend/screens/config/app_config.dart';
+import 'package:feedback_frontend/models/user_model.dart';
+import 'package:feedback_frontend/utils/user_provider.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -27,10 +34,12 @@ class _LoginScreenState extends State<LoginScreen> {
 
   // Authentication Clients
   final GoogleSignIn _googleSignIn = GoogleSignIn(
-    clientId:
-        '1075337596698-4dltejn7eonencbf6gmeu55k7ohlikfn.apps.googleusercontent.com',
-    serverClientId:
-        '1075337596698-pca16pmr7h29t2lvcv0n4sh87m98o1lq.apps.googleusercontent.com',
+    clientId: Platform.isAndroid
+        ? '1075337596698-4dltejn7eonencbf6gmeu55k7ohlikfn.apps.googleusercontent.com'
+        : null,
+    serverClientId: Platform.isIOS
+        ? '1075337596698-pca16pmr7h29t2lvcv0n4sh87m98o1lq.apps.googleusercontent.com'
+        : null,
     scopes: ['email', 'profile'],
   );
 
@@ -75,10 +84,27 @@ class _LoginScreenState extends State<LoginScreen> {
       final responseData = jsonDecode(response.body) as Map<String, dynamic>;
 
       if (response.statusCode == 200) {
-        await _storeUserData(responseData);
+        final user = AppUser.fromJson(responseData);
+        await _storeUserData(user);
 
         if (mounted) {
-          _navigateAfterLogin(responseData['role']?.toString().toLowerCase());
+          // Update the user provider with the logged-in user
+          Provider.of<UserProvider>(context, listen: false).initializeUser();
+
+          // Redirect based on role
+          if (user.role == UserRole.admin) {
+            Navigator.pushNamedAndRemoveUntil(
+              context,
+              AppRoutes.adminDashboard, // Make sure this route is defined
+              (route) => false,
+            );
+          } else {
+            Navigator.pushNamedAndRemoveUntil(
+              context,
+              AppRoutes.home, // Regular user home
+              (route) => false,
+            );
+          }
         }
       } else {
         setState(() =>
@@ -92,6 +118,7 @@ class _LoginScreenState extends State<LoginScreen> {
       setState(() => _loginError = 'Connection error: ${e.message}');
     } catch (e) {
       setState(() => _loginError = 'Login failed: ${e.toString()}');
+      debugPrint('Login error: $e');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -137,15 +164,20 @@ class _LoginScreenState extends State<LoginScreen> {
       );
 
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        await _storeUserData(data);
+        final user = AppUser.fromJson(jsonDecode(response.body));
+        await _storeUserData(user);
 
         if (mounted) {
-          _navigateAfterLogin(data['role']?.toString().toLowerCase());
+          Provider.of<UserProvider>(context, listen: false).initializeUser();
+          _navigateAfterLogin(user.role);
         }
       } else {
         throw Exception('Server returned ${response.statusCode}');
       }
+    } on MissingPluginException catch (e) {
+      debugPrint('Facebook login failed: MissingPluginException: ${e.message}');
+      setState(() => _loginError =
+          'Facebook login is not properly configured. Please try another login method.');
     } on SocketException {
       setState(() => _loginError = 'No internet connection');
     } on PlatformException catch (e) {
@@ -170,7 +202,10 @@ class _LoginScreenState extends State<LoginScreen> {
       });
 
       final GoogleSignInAccount? user = await _googleSignIn.signIn();
-      if (user == null) return;
+      if (user == null) {
+        setState(() => _isGoogleLoading = false);
+        return;
+      }
 
       final GoogleSignInAuthentication auth = await user.authentication;
       if (auth.accessToken == null || auth.idToken == null) {
@@ -188,18 +223,21 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (!mounted) return;
 
-      final responseData = jsonDecode(response.body) as Map<String, dynamic>;
-
       if (response.statusCode == 200) {
-        await _storeUserData(responseData);
+        final user = AppUser.fromJson(jsonDecode(response.body));
+        await _storeUserData(user);
 
         if (mounted) {
-          _navigateAfterLogin(responseData['role']?.toString().toLowerCase());
+          Provider.of<UserProvider>(context, listen: false).initializeUser();
+          _navigateAfterLogin(user.role);
         }
       } else {
-        throw Exception(
-            responseData['detail'] ?? 'Google authentication failed');
+        throw Exception('Google authentication failed');
       }
+    } on MissingPluginException catch (e) {
+      debugPrint('Google login failed: MissingPluginException: ${e.message}');
+      setState(() => _loginError =
+          'Google login is not properly configured. Please try another login method.');
     } on SocketException {
       setState(() => _loginError = 'No internet connection');
     } on PlatformException catch (e) {
@@ -213,21 +251,36 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  Future<void> _storeUserData(Map<String, dynamic> data) async {
+  Future<void> _storeUserData(AppUser user) async {
     await TokenService.storeTokens(
-      accessToken: data['access'],
-      refreshToken: data['refresh'],
-      expiresIn: data['expires_in'],
+      accessToken: user.accessToken!,
+      refreshToken: user.refreshToken!,
     );
 
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('username', data['username'] ?? '');
+    await prefs.setString('userId', user.id);
+    await prefs.setString('email', user.email);
+    await prefs.setString('username', user.username);
+    await prefs.setString('role', user.role.name);
+
+    // Store profile data
+    await prefs.setString('phoneNumber', user.profile.phoneNumber ?? '');
+    await prefs.setString('profilePicture', user.profile.profilePicture ?? '');
+    await prefs.setString('bio', user.profile.bio ?? '');
+    if (user.profile.dateOfBirth != null) {
+      await prefs.setString(
+          'dateOfBirth', user.profile.dateOfBirth!.toIso8601String());
+    }
+    await prefs.setString(
+      'notificationPreference',
+      user.profile.notificationPreference.name,
+    );
   }
 
-  void _navigateAfterLogin(String? role) {
+  void _navigateAfterLogin(UserRole role) {
     Navigator.pushNamedAndRemoveUntil(
       context,
-      role == 'admin' ? AppRoutes.adminDashboard : AppRoutes.home,
+      role == UserRole.admin ? AppRoutes.adminDashboard : AppRoutes.home,
       (route) => false,
     );
   }
@@ -257,6 +310,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
               ),
               const SizedBox(height: 40),
+
               if (_loginError != null)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 16),
@@ -265,6 +319,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     style: const TextStyle(color: Colors.red),
                   ),
                 ),
+
+              // Email/Username Field
               TextField(
                 controller: _emailController,
                 decoration: InputDecoration(
@@ -277,6 +333,8 @@ class _LoginScreenState extends State<LoginScreen> {
                 onChanged: (_) => setState(() => _emailError = null),
               ),
               const SizedBox(height: 16),
+
+              // Password Field
               TextField(
                 controller: _passwordController,
                 decoration: InputDecoration(
@@ -289,6 +347,8 @@ class _LoginScreenState extends State<LoginScreen> {
                 onChanged: (_) => setState(() => _passwordError = null),
               ),
               const SizedBox(height: 8),
+
+              // Forgot Password
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton(
@@ -298,6 +358,8 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
               const SizedBox(height: 24),
+
+              // Login Button
               SizedBox(
                 width: double.infinity,
                 height: 50,
@@ -309,6 +371,8 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
               const SizedBox(height: 30),
+
+              // Divider
               Row(
                 children: [
                   const Expanded(child: Divider()),
@@ -323,9 +387,12 @@ class _LoginScreenState extends State<LoginScreen> {
                 ],
               ),
               const SizedBox(height: 30),
+
+              // Social Login Buttons
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
+                  // Facebook Login
                   IconButton(
                     iconSize: 50,
                     padding: const EdgeInsets.all(12),
@@ -344,6 +411,8 @@ class _LoginScreenState extends State<LoginScreen> {
                         : _handleFacebookLogin,
                   ),
                   const SizedBox(width: 20),
+
+                  // Google Login
                   IconButton(
                     iconSize: 50,
                     padding: const EdgeInsets.all(12),
@@ -367,6 +436,8 @@ class _LoginScreenState extends State<LoginScreen> {
                 ],
               ),
               const SizedBox(height: 40),
+
+              // Sign Up Prompt
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [

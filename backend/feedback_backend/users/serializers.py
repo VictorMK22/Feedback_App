@@ -5,6 +5,7 @@ import requests
 from django.conf import settings
 from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 class ProfileSerializer(serializers.ModelSerializer):
     class Meta:
@@ -108,3 +109,18 @@ class UserAuthResponseSerializer(UserResponseSerializer):
     
     class Meta(UserResponseSerializer.Meta):
         fields = UserResponseSerializer.Meta.fields + ['is_new_user']
+
+class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+    def validate(self, attrs):
+        data = super().validate(attrs)
+        refresh = self.get_token(self.user)
+        
+        data['refresh'] = str(refresh)
+        data['access'] = str(refresh.access_token)
+        data['user'] = {
+            'id': self.user.id,
+            'username': self.user.username,
+            'email': self.user.email,
+            'role': self.user.role,
+        }
+        return data
